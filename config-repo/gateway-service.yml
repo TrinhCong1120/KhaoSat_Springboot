@@ -1,0 +1,89 @@
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: auth-service
+              uri: lb://auth-service
+              predicates:
+                - Path=/api/Auth/**
+            - id: core-service
+              uri: lb://core-service
+              predicates:
+                - Path=/api/Users/**,/api/Roles/**,/api/Menus/**,/api/Functions/**
+            - id: survey-service
+              uri: lb://survey-service
+              predicates:
+                - Path=/api/Surveys/**,/api/Pages/**,/api/Responses/**,/api/Dashboard/**,/api/FailedSurveys/**,/api/Questions/**,/api/Reports/**,/api/Conditions/**,/api/public/surveys/**
+            - id: notification-service
+              uri: lb://notification-service
+              predicates:
+                - Path=/api/notifications/**
+            - id: auth-service-openapi
+              uri: lb://auth-service
+              predicates:
+                - Path=/swagger/auth/v3/api-docs
+              filters:
+                - SetPath=/v3/api-docs
+            - id: core-service-openapi
+              uri: lb://core-service
+              predicates:
+                - Path=/swagger/core/v3/api-docs
+              filters:
+                - SetPath=/v3/api-docs
+            - id: survey-service-openapi
+              uri: lb://survey-service
+              predicates:
+                - Path=/swagger/survey/v3/api-docs,/swagger/survey/v3/api-doc
+              filters:
+                - SetPath=/v3/api-docs
+app:
+  cors:
+    allowed-origins:
+      - "http://localhost:3000"
+    allowed-methods:
+      - GET
+      - POST
+      - PUT
+      - PATCH
+      - DELETE
+      - OPTIONS
+    allowed-headers:
+      - "*"
+    exposed-headers:
+      - Authorization
+    allow-credentials: true
+    max-age: 3600
+server:
+  port: 8080
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:8761/eureka/}
+    register-with-eureka: true
+    fetch-registry: true
+
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: auth-service
+        url: /swagger/auth/v3/api-docs
+      - name: core-service
+        url: /swagger/core/v3/api-docs
+      - name: survey-service
+        url: /swagger/survey/v3/api-docs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: always
