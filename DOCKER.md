@@ -27,9 +27,25 @@ Config Server:
 http://localhost:8888
 ```
 
+## Dockerfile tung service
+
+Moi service co Dockerfile rieng trong thu muc service:
+
+```text
+auth-service/Dockerfile
+config-service/Dockerfile
+core-service/Dockerfile
+discovery-service/Dockerfile
+gateway-service/Dockerfile
+notification-service/Dockerfile
+survey-service/Dockerfile
+```
+
+Compose build moi service voi context la thu muc service tuong ung.
+
 ## IPv6 cho Maven
 
-Dockerfile da dat:
+Moi Dockerfile da dat:
 
 ```text
 MAVEN_OPTS=-Djava.net.preferIPv6Addresses=true -Djava.net.preferIPv4Stack=false

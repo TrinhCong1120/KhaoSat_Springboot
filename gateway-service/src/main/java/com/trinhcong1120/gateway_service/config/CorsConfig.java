@@ -1,8 +1,11 @@
 package com.trinhcong1120.gateway_service.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
@@ -19,23 +22,31 @@ public class CorsConfig {
   private final Boolean allowCredentials;
   private final Long maxAge;
 
-  public CorsConfig(
-          @Value("${app.cors.allowed-origins:http://localhost:3000}") List<String> allowedOrigins,
-          @Value("${app.cors.allowed-methods:GET,POST,PUT,DELETE,PATCH,OPTIONS}") List<String> allowedMethods,
-          @Value("${app.cors.allowed-headers:*}") List<String> allowedHeaders,
-          @Value("${app.cors.exposed-headers:Authorization}") List<String> exposedHeaders,
-          @Value("${app.cors.allow-credentials:true}") Boolean allowCredentials,
-          @Value("${app.cors.max-age:3600}") Long maxAge
-  ) {
-    this.allowedOrigins = allowedOrigins;
-    this.allowedMethods = allowedMethods;
-    this.allowedHeaders = allowedHeaders;
-    this.exposedHeaders = exposedHeaders;
-    this.allowCredentials = allowCredentials;
-    this.maxAge = maxAge;
+  public CorsConfig(Environment environment) {
+    Binder binder = Binder.get(environment);
+
+    this.allowedOrigins = binder
+            .bind("app.cors.allowed-origins", Bindable.listOf(String.class))
+            .orElse(List.of("http://localhost:3000"));
+    this.allowedMethods = binder
+            .bind("app.cors.allowed-methods", Bindable.listOf(String.class))
+            .orElse(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+    this.allowedHeaders = binder
+            .bind("app.cors.allowed-headers", Bindable.listOf(String.class))
+            .orElse(List.of("*"));
+    this.exposedHeaders = binder
+            .bind("app.cors.exposed-headers", Bindable.listOf(String.class))
+            .orElse(List.of("Authorization"));
+    this.allowCredentials = binder
+            .bind("app.cors.allow-credentials", Boolean.class)
+            .orElse(true);
+    this.maxAge = binder
+            .bind("app.cors.max-age", Long.class)
+            .orElse(3600L);
   }
 
   @Bean
+  @ConditionalOnProperty(prefix = "app.cors", name = "enabled", havingValue = "true", matchIfMissing = true)
   public CorsWebFilter corsWebFilter() {
 
     CorsConfiguration configuration =

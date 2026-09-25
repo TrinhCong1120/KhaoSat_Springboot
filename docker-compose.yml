@@ -42,11 +42,9 @@ services:
 
   config-service:
     build:
-      context: .
+      context: ./config-service
       dockerfile: Dockerfile
       network: host
-      args:
-        SERVICE_DIR: config-service
     environment:
       JAVA_OPTS: "-Djava.net.preferIPv6Addresses=true -Djava.net.preferIPv4Stack=false"
       EUREKA_CLIENT_ENABLED: "false"
@@ -59,11 +57,9 @@ services:
 
   discovery-service:
     build:
-      context: .
+      context: ./discovery-service
       dockerfile: Dockerfile
       network: host
-      args:
-        SERVICE_DIR: discovery-service
     environment:
       CONFIG_SERVER_URL: configserver:http://config-service:8888
       JAVA_OPTS: "-Djava.net.preferIPv6Addresses=true -Djava.net.preferIPv4Stack=false"
@@ -75,11 +71,9 @@ services:
 
   auth-service:
     build:
-      context: .
+      context: ./auth-service
       dockerfile: Dockerfile
       network: host
-      args:
-        SERVICE_DIR: auth-service
     environment: &app-env
       CONFIG_SERVER_URL: configserver:http://config-service:8888
       DB_HOST: postgres
@@ -104,11 +98,9 @@ services:
 
   core-service:
     build:
-      context: .
+      context: ./core-service
       dockerfile: Dockerfile
       network: host
-      args:
-        SERVICE_DIR: core-service
     environment: *app-env
     ports:
       - "8081:8081"
@@ -125,11 +117,9 @@ services:
 
   survey-service:
     build:
-      context: .
+      context: ./survey-service
       dockerfile: Dockerfile
       network: host
-      args:
-        SERVICE_DIR: survey-service
     environment: *app-env
     ports:
       - "8082:8082"
@@ -144,11 +134,9 @@ services:
 
   notification-service:
     build:
-      context: .
+      context: ./notification-service
       dockerfile: Dockerfile
       network: host
-      args:
-        SERVICE_DIR: notification-service
     environment:
       <<: *app-env
       MAIL_USERNAME: ${MAIL_USERNAME:-}
@@ -166,11 +154,9 @@ services:
 
   gateway-service:
     build:
-      context: .
+      context: ./gateway-service
       dockerfile: Dockerfile
       network: host
-      args:
-        SERVICE_DIR: gateway-service
     environment: *app-env
     ports:
       - "8080:8080"
