@@ -2,6 +2,9 @@ package com.trinhcong1120.survey_service.repository;
 
 import com.trinhcong1120.survey_service.entity.Response;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -33,4 +36,11 @@ public interface ResponseRepository
           LocalDateTime from,
           LocalDateTime to
   );
+
+  @Modifying
+  @Query(
+          value = "DELETE FROM responses WHERE survey_id = :surveyId",
+          nativeQuery = true
+  )
+  void deleteBySurveyId(@Param("surveyId") Integer surveyId);
 }

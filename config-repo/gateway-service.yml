@@ -52,9 +52,9 @@ app:
   cors:
     enabled: true
     allowed-origins:
-      - "https://c8fa-2001-df2-9b00-1995-3cf2-8a99-648e-313a.ngrok-free.app"
+      - "https://7e07-2001-df2-9b00-1995-8186-f2f7-af0b-ffe9.ngrok-free.app"
       - "http://localhost:3000"
-     
+
 
     allowed-methods:
       - GET

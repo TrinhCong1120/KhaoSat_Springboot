@@ -25,19 +25,28 @@ public class SurveyService {
   private final QuestionRepository questionRepository;
   private final OptionRepository optionRepository;
   private final ConditionRepository conditionRepository;
+  private final ResponseRepository responseRepository;
+  private final AnswerRepository answerRepository;
+  private final AnswerOptionRepository answerOptionRepository;
 
   public SurveyService(
           SurveyRepository surveyRepository,
           PageRepository pageRepository,
           QuestionRepository questionRepository,
           OptionRepository optionRepository,
-          ConditionRepository conditionRepository
+          ConditionRepository conditionRepository,
+          ResponseRepository responseRepository,
+          AnswerRepository answerRepository,
+          AnswerOptionRepository answerOptionRepository
   ) {
     this.surveyRepository = surveyRepository;
     this.pageRepository = pageRepository;
     this.questionRepository = questionRepository;
     this.optionRepository = optionRepository;
     this.conditionRepository = conditionRepository;
+    this.responseRepository = responseRepository;
+    this.answerRepository = answerRepository;
+    this.answerOptionRepository = answerOptionRepository;
   }
 
   @Transactional(readOnly = true)
@@ -112,6 +121,15 @@ public class SurveyService {
 
   public void delete(Integer id) {
     Survey survey = getEntity(id);
+
+    conditionRepository.deleteBySurveyId(id);
+    answerOptionRepository.deleteBySurveyId(id);
+    answerRepository.deleteBySurveyId(id);
+    responseRepository.deleteBySurveyId(id);
+    optionRepository.deleteBySurveyId(id);
+    questionRepository.deleteBySurveyId(id);
+    pageRepository.deleteBySurveyId(id);
+
     surveyRepository.delete(survey);
   }
 
