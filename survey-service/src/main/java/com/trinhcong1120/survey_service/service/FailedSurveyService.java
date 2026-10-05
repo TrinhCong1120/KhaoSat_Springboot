@@ -403,6 +403,12 @@ public class FailedSurveyService {
 
     response.setSurvey(survey);
     response.setRequestId(requestId);
+    response.setToken(
+            getTextIgnoreCase(
+                    getIgnoreCase(record, "data"),
+                    "token"
+            )
+    );
 
     LocalDateTime submittedAt =
             parseDateTime(
@@ -462,6 +468,10 @@ public class FailedSurveyService {
 
       answer.setWard(
               item.getWard()
+      );
+
+      answer.setAddressDetail(
+              item.getAddressDetail()
       );
 
       answer =
@@ -657,5 +667,25 @@ public class FailedSurveyService {
     } catch (Exception e) {
       return null;
     }
+  }
+
+  private String getTextIgnoreCase(
+          JsonNode node,
+          String name
+  ) {
+
+    JsonNode value =
+            getIgnoreCase(node, name);
+
+    if (value == null
+            || value.isNull()) {
+      return null;
+    }
+
+    String text = value.asText();
+
+    return text == null || text.isBlank()
+            ? null
+            : text;
   }
 }

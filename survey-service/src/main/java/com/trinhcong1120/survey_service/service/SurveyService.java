@@ -1,10 +1,13 @@
 package com.trinhcong1120.survey_service.service;
 
 import com.trinhcong1120.survey_service.dto.condition.ConditionResponse;
+import com.trinhcong1120.survey_service.dto.media.MediaUploadResponse;
 import com.trinhcong1120.survey_service.dto.question.OptionResponse;
 import com.trinhcong1120.survey_service.dto.question.QuestionResponse;
 import com.trinhcong1120.survey_service.dto.survey.*;
 import com.trinhcong1120.survey_service.entity.Condition;
+import com.trinhcong1120.survey_service.entity.MediaFile;
+import com.trinhcong1120.survey_service.entity.Option;
 import com.trinhcong1120.survey_service.entity.Page;
 import com.trinhcong1120.survey_service.entity.Question;
 import com.trinhcong1120.survey_service.entity.Survey;
@@ -28,6 +31,8 @@ public class SurveyService {
   private final ResponseRepository responseRepository;
   private final AnswerRepository answerRepository;
   private final AnswerOptionRepository answerOptionRepository;
+  private final MediaFileRepository mediaFileRepository;
+  private final QuestionValidationRuleService questionValidationRuleService;
 
   public SurveyService(
           SurveyRepository surveyRepository,
@@ -37,7 +42,9 @@ public class SurveyService {
           ConditionRepository conditionRepository,
           ResponseRepository responseRepository,
           AnswerRepository answerRepository,
-          AnswerOptionRepository answerOptionRepository
+          AnswerOptionRepository answerOptionRepository,
+          MediaFileRepository mediaFileRepository,
+          QuestionValidationRuleService questionValidationRuleService
   ) {
     this.surveyRepository = surveyRepository;
     this.pageRepository = pageRepository;
@@ -47,6 +54,8 @@ public class SurveyService {
     this.responseRepository = responseRepository;
     this.answerRepository = answerRepository;
     this.answerOptionRepository = answerOptionRepository;
+    this.mediaFileRepository = mediaFileRepository;
+    this.questionValidationRuleService = questionValidationRuleService;
   }
 
   @Transactional(readOnly = true)
@@ -72,9 +81,14 @@ public class SurveyService {
     response.setId(survey.getId());
     response.setTitle(survey.getTitle());
     response.setDescription(survey.getDescription());
+    response.setImageUrl(survey.getImageUrl());
+    response.setVideoUrl(survey.getVideoUrl());
+    response.setAudioUrl(survey.getAudioUrl());
     response.setCreatorUser(survey.getCreatorUser());
     response.setCreatedAt(survey.getCreatedAt());
     response.setIsActive(survey.getIsActive());
+    response.setValidationRevision(survey.getValidationRevision());
+    response.setMediaFiles(toMediaResponses("SURVEY", survey.getId()));
     response.setPages(toPageDetailResponses(id));
     response.setConditions(toConditionResponses(id));
 
@@ -89,6 +103,9 @@ public class SurveyService {
 
     survey.setTitle(request.getTitle());
     survey.setDescription(request.getDescription());
+    survey.setImageUrl(request.getImageUrl());
+    survey.setVideoUrl(request.getVideoUrl());
+    survey.setAudioUrl(request.getAudioUrl());
     survey.setCreatorUser(username);
     survey.setCreatedAt(LocalDateTime.now());
     survey.setIsActive(false);
@@ -104,6 +121,9 @@ public class SurveyService {
 
     survey.setTitle(request.getTitle());
     survey.setDescription(request.getDescription());
+    survey.setImageUrl(request.getImageUrl());
+    survey.setVideoUrl(request.getVideoUrl());
+    survey.setAudioUrl(request.getAudioUrl());
 
     return toResponse(surveyRepository.save(survey));
   }
@@ -145,12 +165,20 @@ public class SurveyService {
   private SurveyDetailResponse.PageDetailResponse toPageDetailResponse(
           Page page
   ) {
-    return new SurveyDetailResponse.PageDetailResponse(
+    SurveyDetailResponse.PageDetailResponse response =
+            new SurveyDetailResponse.PageDetailResponse(
             page.getId(),
             page.getTitle(),
+            page.getDescription(),
+            page.getImageUrl(),
+            page.getVideoUrl(),
+            page.getAudioUrl(),
             page.getOrderIndex(),
             toQuestionResponses(page.getId())
     );
+
+    response.setMediaFiles(toMediaResponses("PAGE", page.getId()));
+    return response;
   }
 
   private List<QuestionResponse> toQuestionResponses(Integer pageId) {
@@ -161,30 +189,49 @@ public class SurveyService {
   }
 
   private QuestionResponse toQuestionResponse(Question question) {
-    return new QuestionResponse(
+    QuestionResponse response = new QuestionResponse(
             question.getId(),
             question.getPage().getId(),
             question.getQuestionText(),
             question.getQuestionType().getId(),
             question.getQuestionType().getCode(),
+            question.getQuestionType().getName(),
             question.getIsRequired(),
             question.getOrderIndex(),
             question.getDescription(),
+            question.getImageUrl(),
+            question.getVideoUrl(),
+            question.getAudioUrl(),
             toOptionResponses(question.getId())
     );
+
+    response.setValidationRules(
+            questionValidationRuleService.getByQuestion(question.getId())
+    );
+    response.setMediaFiles(toMediaResponses("QUESTION", question.getId()));
+
+    return response;
   }
 
   private List<OptionResponse> toOptionResponses(Integer questionId) {
     return optionRepository.findByQuestion_IdOrderByOrderIndexAsc(questionId)
             .stream()
-            .map(option ->
-                    new OptionResponse(
-                            option.getId(),
-                            option.getOptionText(),
-                            option.getOrderIndex()
-                    )
-            )
+            .map(this::toOptionResponse)
             .toList();
+  }
+
+  private OptionResponse toOptionResponse(Option option) {
+    OptionResponse response = new OptionResponse(
+            option.getId(),
+            option.getOptionText(),
+            option.getImageUrl(),
+            option.getVideoUrl(),
+            option.getAudioUrl(),
+            option.getOrderIndex()
+    );
+
+    response.setMediaFiles(toMediaResponses("OPTION", option.getId()));
+    return response;
   }
 
   private List<ConditionResponse> toConditionResponses(Integer surveyId) {
@@ -209,13 +256,47 @@ public class SurveyService {
   }
 
   private SurveyResponse toResponse(Survey survey) {
-    return new SurveyResponse(
+    SurveyResponse response = new SurveyResponse(
             survey.getId(),
             survey.getTitle(),
             survey.getDescription(),
+            survey.getImageUrl(),
+            survey.getVideoUrl(),
+            survey.getAudioUrl(),
             survey.getCreatorUser(),
             survey.getCreatedAt(),
             survey.getIsActive()
     );
+
+    response.setMediaFiles(toMediaResponses("SURVEY", survey.getId()));
+    return response;
+  }
+
+  private List<MediaUploadResponse> toMediaResponses(
+          String ownerType,
+          Integer ownerId
+  ) {
+    return mediaFileRepository
+            .findByOwnerTypeAndOwnerIdOrderByUploadedAtDesc(ownerType, ownerId)
+            .stream()
+            .map(this::toMediaResponse)
+            .toList();
+  }
+
+  private MediaUploadResponse toMediaResponse(MediaFile mediaFile) {
+    MediaUploadResponse response = new MediaUploadResponse();
+    response.setId(mediaFile.getId());
+    response.setOwnerType(mediaFile.getOwnerType());
+    response.setOwnerId(mediaFile.getOwnerId());
+    response.setMediaType(mediaFile.getMediaType());
+    response.setOriginalFilename(mediaFile.getOriginalFilename());
+    response.setContentType(mediaFile.getContentType());
+    response.setSizeBytes(mediaFile.getSizeBytes());
+    response.setBucketName(mediaFile.getBucketName());
+    response.setObjectKey(mediaFile.getObjectKey());
+    response.setObjectUrl(mediaFile.getObjectUrl());
+    response.setCreatedByUserId(mediaFile.getCreatedByUserId());
+    response.setUploadedAt(mediaFile.getUploadedAt());
+    return response;
   }
 }

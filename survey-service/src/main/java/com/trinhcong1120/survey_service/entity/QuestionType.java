@@ -17,6 +17,9 @@ public class QuestionType {
   @Column(name = "code")
   private String code;
 
+  @Column(name = "name")
+  private String name;
+
   @JsonIgnore
   @OneToMany(mappedBy = "questionType", fetch = FetchType.LAZY)
   private List<Question> questions = new ArrayList<>();
@@ -28,6 +31,9 @@ public class QuestionType {
 
   public String getCode() { return code; }
   public void setCode(String code) { this.code = code; }
+
+  public String getName() { return name; }
+  public void setName(String name) { this.name = name; }
 
   public List<Question> getQuestions() { return questions; }
   public void setQuestions(List<Question> questions) { this.questions = questions; }

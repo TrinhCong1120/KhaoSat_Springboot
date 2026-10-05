@@ -4,12 +4,16 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class SubmitSurveyRequest {
 
     @Valid
-    @NotEmpty(message = "Danh sách câu trả lời không được để trống")
+    @NotEmpty(message = "Danh sach cau tra loi khong duoc de trong")
     private List<SubmitAnswerRequest> answers = new ArrayList<>();
+
+    private String token;
+    private UUID requestId;
 
     public SubmitSurveyRequest() {
     }
@@ -24,5 +28,21 @@ public class SubmitSurveyRequest {
 
     public void setAnswers(List<SubmitAnswerRequest> answers) {
         this.answers = answers;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+
+    public UUID getRequestId() {
+        return requestId;
+    }
+
+    public void setRequestId(UUID requestId) {
+        this.requestId = requestId;
     }
 }

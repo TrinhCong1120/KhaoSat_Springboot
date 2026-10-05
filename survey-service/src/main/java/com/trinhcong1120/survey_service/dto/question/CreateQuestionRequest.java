@@ -21,7 +21,10 @@ public class CreateQuestionRequest {
     private Integer orderIndex;
 
     private String description;
-    private List<String> options;
+    private String imageUrl;
+    private String videoUrl;
+    private String audioUrl;
+    private List<OptionRequest> options;
 
     public CreateQuestionRequest() {
     }
@@ -74,11 +77,36 @@ public class CreateQuestionRequest {
         this.description = description;
     }
 
-    public List<String> getOptions() {
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
+    }
+
+    public String getAudioUrl() {
+        return audioUrl;
+    }
+
+    public void setAudioUrl(String audioUrl) {
+        this.audioUrl = audioUrl;
+    }
+
+    public List<OptionRequest> getOptions() {
         return options;
     }
 
-    public void setOptions(List<String> options) {
+    public void setOptions(List<OptionRequest> options) {
         this.options = options;
     }
+
 }

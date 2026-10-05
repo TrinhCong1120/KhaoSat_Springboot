@@ -2,10 +2,13 @@ package com.trinhcong1120.survey_service.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trinhcong1120.survey_service.dto.condition.ConditionResponse;
+import com.trinhcong1120.survey_service.dto.media.MediaUploadResponse;
 import com.trinhcong1120.survey_service.dto.question.OptionResponse;
 import com.trinhcong1120.survey_service.dto.question.QuestionResponse;
 import com.trinhcong1120.survey_service.dto.submit.*;
 import com.trinhcong1120.survey_service.dto.survey.SurveyDetailResponse;
+import com.trinhcong1120.survey_service.dto.validation.ValidateSurveyRequest;
+import com.trinhcong1120.survey_service.dto.validation.ValidateSurveyResponse;
 import com.trinhcong1120.survey_service.entity.*;
 import com.trinhcong1120.survey_service.entity.Option;
 import com.trinhcong1120.survey_service.entity.Response;
@@ -16,6 +19,8 @@ import com.trinhcong1120.survey_service.util.ConditionUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -35,6 +40,9 @@ public class PublicSurveyService {
   private final ResponseRepository responseRepository;
   private final AnswerRepository answerRepository;
   private final AnswerOptionRepository answerOptionRepository;
+  private final MediaFileRepository mediaFileRepository;
+  private final AnswerValidationService answerValidationService;
+  private final QuestionValidationRuleService questionValidationRuleService;
   private final ObjectMapper objectMapper;
   private final TransactionTemplate transactionTemplate;
 
@@ -47,6 +55,9 @@ public class PublicSurveyService {
           ResponseRepository responseRepository,
           AnswerRepository answerRepository,
           AnswerOptionRepository answerOptionRepository,
+          MediaFileRepository mediaFileRepository,
+          AnswerValidationService answerValidationService,
+          QuestionValidationRuleService questionValidationRuleService,
           ObjectMapper objectMapper,
           TransactionTemplate transactionTemplate
   ) {
@@ -58,6 +69,9 @@ public class PublicSurveyService {
     this.responseRepository = responseRepository;
     this.answerRepository = answerRepository;
     this.answerOptionRepository = answerOptionRepository;
+    this.mediaFileRepository = mediaFileRepository;
+    this.answerValidationService = answerValidationService;
+    this.questionValidationRuleService = questionValidationRuleService;
     this.objectMapper = objectMapper;
     this.transactionTemplate = transactionTemplate;
   }
@@ -70,9 +84,14 @@ public class PublicSurveyService {
     response.setId(survey.getId());
     response.setTitle(survey.getTitle());
     response.setDescription(survey.getDescription());
+    response.setImageUrl(survey.getImageUrl());
+    response.setVideoUrl(survey.getVideoUrl());
+    response.setAudioUrl(survey.getAudioUrl());
     response.setCreatorUser(survey.getCreatorUser());
     response.setCreatedAt(survey.getCreatedAt());
     response.setIsActive(survey.getIsActive());
+    response.setValidationRevision(survey.getValidationRevision());
+    response.setMediaFiles(toMediaResponses("SURVEY", survey.getId()));
     response.setPages(toPageDetailResponses(surveyId));
     response.setConditions(toConditionResponses(surveyId));
 
@@ -94,23 +113,40 @@ public class PublicSurveyService {
   ) {
     Survey survey = getActiveSurveyEntity(surveyId);
 
-    validateSubmittedAnswers(
-            surveyId,
-            request.getAnswers()
-    );
+    List<SubmitAnswerRequest> answersToSave =
+            answerValidationService.validateAndFilter(
+                    surveyId,
+                    request.getAnswers()
+            );
 
-    validateRequiredAnswers(
-            surveyId,
-            request.getAnswers()
-    );
+    UUID requestId =
+            request.getRequestId() == null
+                    ? UUID.randomUUID()
+                    : request.getRequestId();
 
-    UUID requestId = UUID.randomUUID();
+    java.util.Optional<Response> existingResponse =
+            responseRepository.findByRequestId(requestId);
+
+    if (existingResponse.isPresent()) {
+      Response existing = existingResponse.get();
+
+      if (!Objects.equals(existing.getSurvey().getId(), surveyId)) {
+        throw new BadRequestException("requestId da ton tai o survey khac");
+      }
+
+      return new SubmitSurveyResponse(
+              "Submit thanh cong",
+              existing.getId(),
+              existing.getRequestId()
+      );
+    }
 
     try {
       Response response = saveResponse(
               survey,
               request,
-              requestId
+              requestId,
+              answersToSave
       );
 
       return new SubmitSurveyResponse(
@@ -135,16 +171,66 @@ public class PublicSurveyService {
     }
   }
 
+  @Transactional(readOnly = true)
+  public ValidateSurveyResponse validate(
+          Integer surveyId,
+          ValidateSurveyRequest request
+  ) {
+    Survey survey = getActiveSurveyEntity(surveyId);
+
+    if (request != null
+            && request.getSurveyRevision() != null
+            && !Objects.equals(
+            request.getSurveyRevision(),
+            survey.getValidationRevision()
+    )) {
+      throw new ResponseStatusException(
+              HttpStatus.CONFLICT,
+              "Survey revision da thay doi"
+      );
+    }
+
+    AnswerValidationService.ValidationResult result =
+            answerValidationService.validateSubmittedOnly(
+                    surveyId,
+                    request == null ? null : request.getAnswers(),
+                    false
+            );
+
+    ValidateSurveyResponse response = new ValidateSurveyResponse();
+    response.setValid(result.valid());
+    response.setSurveyRevision(survey.getValidationRevision());
+    response.setEvaluatedAt(java.time.Instant.now());
+    response.setFieldErrors(result.fieldErrors());
+    response.setQuestionStates(
+            result.applicability()
+                    .entrySet()
+                    .stream()
+                    .map(entry ->
+                            new ValidateSurveyResponse.QuestionState(
+                                    entry.getKey(),
+                                    entry.getValue(),
+                                    entry.getValue()
+                            )
+                    )
+                    .toList()
+    );
+
+    return response;
+  }
+
   private Response saveResponse(
           Survey survey,
           SubmitSurveyRequest request,
-          UUID requestId
+          UUID requestId,
+          List<SubmitAnswerRequest> answers
   ) {
     return transactionTemplate.execute(status ->
             doSaveResponse(
                     survey,
                     request,
-                    requestId
+                    requestId,
+                    answers
             )
     );
   }
@@ -152,22 +238,24 @@ public class PublicSurveyService {
   private Response doSaveResponse(
           Survey survey,
           SubmitSurveyRequest request,
-          UUID requestId
+          UUID requestId,
+          List<SubmitAnswerRequest> answers
   ) {
     Response response = new Response();
 
     response.setSurvey(survey);
+    response.setToken(request.getToken());
     response.setRequestId(requestId);
     response.setSubmittedAt(LocalDateTime.now());
 
     response = responseRepository.save(response);
 
-    if (request.getAnswers() == null) {
+    if (answers == null) {
       return response;
     }
 
     for (SubmitAnswerRequest item :
-            request.getAnswers()) {
+            answers) {
 
       Question question =
               questionRepository
@@ -194,6 +282,7 @@ public class PublicSurveyService {
       answer.setWardCode(item.getWardCode());
       answer.setProvince(item.getProvince());
       answer.setWard(item.getWard());
+      answer.setAddressDetail(item.getAddressDetail());
 
       answer = answerRepository.save(answer);
 
@@ -675,6 +764,7 @@ public class PublicSurveyService {
       answer.setAnswerDate(requestAnswer.getAnswerDate());
       answer.setProvince(requestAnswer.getProvince());
       answer.setWard(requestAnswer.getWard());
+      answer.setAddressDetail(requestAnswer.getAddressDetail());
 
       List<AnswerOption> answerOptions =
               new ArrayList<>();
@@ -712,12 +802,20 @@ public class PublicSurveyService {
   private SurveyDetailResponse.PageDetailResponse toPageDetailResponse(
           Page page
   ) {
-    return new SurveyDetailResponse.PageDetailResponse(
+    SurveyDetailResponse.PageDetailResponse response =
+            new SurveyDetailResponse.PageDetailResponse(
             page.getId(),
             page.getTitle(),
+            page.getDescription(),
+            page.getImageUrl(),
+            page.getVideoUrl(),
+            page.getAudioUrl(),
             page.getOrderIndex(),
             toQuestionResponses(page.getId())
     );
+
+    response.setMediaFiles(toMediaResponses("PAGE", page.getId()));
+    return response;
   }
 
   private List<QuestionResponse> toQuestionResponses(Integer pageId) {
@@ -728,30 +826,49 @@ public class PublicSurveyService {
   }
 
   private QuestionResponse toQuestionResponse(Question question) {
-    return new QuestionResponse(
+    QuestionResponse response = new QuestionResponse(
             question.getId(),
             question.getPage().getId(),
             question.getQuestionText(),
             question.getQuestionType().getId(),
             question.getQuestionType().getCode(),
+            question.getQuestionType().getName(),
             question.getIsRequired(),
             question.getOrderIndex(),
             question.getDescription(),
+            question.getImageUrl(),
+            question.getVideoUrl(),
+            question.getAudioUrl(),
             toOptionResponses(question.getId())
     );
+
+    response.setValidationRules(
+            questionValidationRuleService.getByQuestion(question.getId())
+    );
+    response.setMediaFiles(toMediaResponses("QUESTION", question.getId()));
+
+    return response;
   }
 
   private List<OptionResponse> toOptionResponses(Integer questionId) {
     return optionRepository.findByQuestion_IdOrderByOrderIndexAsc(questionId)
             .stream()
-            .map(option ->
-                    new OptionResponse(
-                            option.getId(),
-                            option.getOptionText(),
-                            option.getOrderIndex()
-                    )
-            )
+            .map(this::toOptionResponse)
             .toList();
+  }
+
+  private OptionResponse toOptionResponse(Option option) {
+    OptionResponse response = new OptionResponse(
+            option.getId(),
+            option.getOptionText(),
+            option.getImageUrl(),
+            option.getVideoUrl(),
+            option.getAudioUrl(),
+            option.getOrderIndex()
+    );
+
+    response.setMediaFiles(toMediaResponses("OPTION", option.getId()));
+    return response;
   }
 
   private List<ConditionResponse> toConditionResponses(Integer surveyId) {
@@ -779,5 +896,33 @@ public class PublicSurveyService {
             condition.getTargetQuestion().getId(),
             condition.getAction()
     );
+  }
+
+  private List<MediaUploadResponse> toMediaResponses(
+          String ownerType,
+          Integer ownerId
+  ) {
+    return mediaFileRepository
+            .findByOwnerTypeAndOwnerIdOrderByUploadedAtDesc(ownerType, ownerId)
+            .stream()
+            .map(this::toMediaResponse)
+            .toList();
+  }
+
+  private MediaUploadResponse toMediaResponse(MediaFile mediaFile) {
+    MediaUploadResponse response = new MediaUploadResponse();
+    response.setId(mediaFile.getId());
+    response.setOwnerType(mediaFile.getOwnerType());
+    response.setOwnerId(mediaFile.getOwnerId());
+    response.setMediaType(mediaFile.getMediaType());
+    response.setOriginalFilename(mediaFile.getOriginalFilename());
+    response.setContentType(mediaFile.getContentType());
+    response.setSizeBytes(mediaFile.getSizeBytes());
+    response.setBucketName(mediaFile.getBucketName());
+    response.setObjectKey(mediaFile.getObjectKey());
+    response.setObjectUrl(mediaFile.getObjectUrl());
+    response.setCreatedByUserId(mediaFile.getCreatedByUserId());
+    response.setUploadedAt(mediaFile.getUploadedAt());
+    return response;
   }
 }

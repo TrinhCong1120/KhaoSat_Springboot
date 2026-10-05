@@ -3,6 +3,8 @@ package com.trinhcong1120.survey_service.controller;
 import com.trinhcong1120.survey_service.dto.submit.SubmitSurveyRequest;
 import com.trinhcong1120.survey_service.dto.submit.SubmitSurveyResponse;
 import com.trinhcong1120.survey_service.dto.survey.SurveyDetailResponse;
+import com.trinhcong1120.survey_service.dto.validation.ValidateSurveyRequest;
+import com.trinhcong1120.survey_service.dto.validation.ValidateSurveyResponse;
 import com.trinhcong1120.survey_service.service.PublicSurveyService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -37,6 +39,19 @@ public class PublicSurveyController {
   ) {
     return ResponseEntity.ok(
             publicSurveyService.submit(
+                    surveyId,
+                    request
+            )
+    );
+  }
+
+  @PostMapping("/{surveyId}/validate")
+  public ResponseEntity<ValidateSurveyResponse> validate(
+          @PathVariable Integer surveyId,
+          @Valid @RequestBody ValidateSurveyRequest request
+  ) {
+    return ResponseEntity.ok(
+            publicSurveyService.validate(
                     surveyId,
                     request
             )

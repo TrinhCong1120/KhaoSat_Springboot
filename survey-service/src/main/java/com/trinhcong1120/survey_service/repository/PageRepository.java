@@ -14,6 +14,8 @@ public interface PageRepository extends JpaRepository<Page, Integer> {
 
   List<Page> findBySurvey_IdOrderByOrderIndexAsc(Integer surveyId);
 
+  boolean existsByIdAndSurvey_Id(Integer id, Integer surveyId);
+
   long countBySurvey_Id(Integer surveyId);
 
   @Modifying

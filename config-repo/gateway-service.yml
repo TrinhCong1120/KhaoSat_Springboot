@@ -17,10 +17,15 @@ spring:
               predicates:
                 - Path=/api/Users/**,/api/Roles/**,/api/Menus/**,/api/Functions/**
 
+            - id: survey-validation-rules
+              uri: lb://survey-service
+              predicates:
+                - Path=/api/ValidationRules/**
+
             - id: survey-service
               uri: lb://survey-service
               predicates:
-                - Path=/api/Surveys/**,/api/Pages/**,/api/Responses/**,/api/Dashboard/**,/api/FailedSurveys/**,/api/Questions/**,/api/Reports/**,/api/Conditions/**,/api/public/surveys/**
+                - Path=/api/Surveys/**,/api/Pages/**,/api/Responses/**,/api/Dashboard/**,/api/FailedSurveys/**,/api/Questions/**,/api/Reports/**,/api/Conditions/**,/api/Media/**,/api/public/surveys/**
 
             - id: notification-service
               uri: lb://notification-service

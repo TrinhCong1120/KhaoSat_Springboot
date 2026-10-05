@@ -6,6 +6,7 @@ import com.trinhcong1120.survey_service.entity.Condition;
 import com.trinhcong1120.survey_service.entity.Question;
 
 import java.time.format.DateTimeFormatter;
+import java.math.BigDecimal;
 import java.util.*;
 
 public final class ConditionUtil {
@@ -388,8 +389,8 @@ public final class ConditionUtil {
 
       try {
 
-        Double value =
-                Double.parseDouble(expected);
+        BigDecimal value =
+                new BigDecimal(expected);
 
         if (actual.equals(
                 normalizeNumber(value)
@@ -540,19 +541,13 @@ public final class ConditionUtil {
   }
 
   private static String normalizeNumber(
-          Double value
+          BigDecimal value
   ) {
 
     if (value == null) {
       return null;
     }
 
-    if (value % 1 == 0) {
-      return String.valueOf(
-              value.longValue()
-      );
-    }
-
-    return String.valueOf(value);
+    return value.stripTrailingZeros().toPlainString();
   }
 }

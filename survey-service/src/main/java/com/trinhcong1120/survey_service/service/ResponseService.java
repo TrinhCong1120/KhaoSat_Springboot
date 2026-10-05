@@ -153,6 +153,10 @@ public class ResponseService {
             response.getId(),
             surveyId,
             response.getSurvey().getTitle(),
+            response.getSurvey().getDescription(),
+            response.getSurvey().getImageUrl(),
+            response.getSurvey().getVideoUrl(),
+            response.getSurvey().getAudioUrl(),
             response.getRequestId(),
             response.getSubmittedAt(),
             pageResponses
@@ -181,6 +185,10 @@ public class ResponseService {
     return new ResponsePageResponse(
             page.getId(),
             page.getTitle(),
+            page.getDescription(),
+            page.getImageUrl(),
+            page.getVideoUrl(),
+            page.getAudioUrl(),
             page.getOrderIndex(),
             questions.stream()
                     .map(question ->
@@ -207,6 +215,10 @@ public class ResponseService {
 
     result.setQuestionId(question.getId());
     result.setQuestionText(question.getQuestionText());
+    result.setDescription(question.getDescription());
+    result.setImageUrl(question.getImageUrl());
+    result.setVideoUrl(question.getVideoUrl());
+    result.setAudioUrl(question.getAudioUrl());
     result.setQuestionTypeId(
             question.getQuestionType() == null
                     ? null
@@ -231,6 +243,7 @@ public class ResponseService {
     result.setWardCode(answer.getWardCode());
     result.setProvince(answer.getProvince());
     result.setWard(answer.getWard());
+    result.setAddressDetail(answer.getAddressDetail());
     result.setFormattedAnswer(
             AnswerValueUtil.formatAnswer(answer)
     );

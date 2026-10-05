@@ -40,6 +40,26 @@ services:
       timeout: 10s
       retries: 15
 
+  minio:
+    image: docker.io/bitnamilegacy/minio:2025.7.23-debian-12-r5
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_DEFAULT_BUCKETS: ${MINIO_BUCKET:-survey-media}
+      MINIO_BROWSER: "on"
+      MINIO_SERVER_URL: http://localhost:9000
+      MINIO_API_CORS_ALLOW_ORIGIN: "*"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/bitnami/minio/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   config-service:
     build:
       context: ./config-service
@@ -120,12 +140,20 @@ services:
       context: ./survey-service
       dockerfile: Dockerfile
       network: host
-    environment: *app-env
+    environment:
+      <<: *app-env
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_PUBLIC_URL: http://localhost:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_BUCKET: ${MINIO_BUCKET:-survey-media}
     ports:
       - "8082:8082"
     restart: on-failure:5
     depends_on:
       postgres:
+        condition: service_healthy
+      minio:
         condition: service_healthy
       config-service:
         condition: service_started
@@ -178,3 +206,4 @@ services:
 volumes:
   postgres-data:
   kafka-data:
+  minio-data:

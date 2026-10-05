@@ -1,5 +1,6 @@
 package com.trinhcong1120.survey_service.dto.response;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,6 +9,10 @@ public class ResponseQuestionResponse {
 
     private Integer questionId;
     private String questionText;
+    private String description;
+    private String imageUrl;
+    private String videoUrl;
+    private String audioUrl;
 
     private Integer questionTypeId;
     private String questionTypeCode;
@@ -16,14 +21,15 @@ public class ResponseQuestionResponse {
     private Boolean isApplicable;
 
     private String answerText;
-    private Double answerNumber;
+    private BigDecimal answerNumber;
     private LocalDateTime answerDate;
 
-    private Integer provinceCode;
-    private Integer wardCode;
+    private String provinceCode;
+    private String wardCode;
 
     private String province;
     private String ward;
+    private String addressDetail;
 
     private List<Integer> optionIds = new ArrayList<>();
     private List<String> optionTexts = new ArrayList<>();
@@ -47,6 +53,38 @@ public class ResponseQuestionResponse {
 
     public void setQuestionText(String questionText) {
         this.questionText = questionText;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
+    }
+
+    public String getAudioUrl() {
+        return audioUrl;
+    }
+
+    public void setAudioUrl(String audioUrl) {
+        this.audioUrl = audioUrl;
     }
 
     public Integer getQuestionTypeId() {
@@ -89,11 +127,11 @@ public class ResponseQuestionResponse {
         this.answerText = answerText;
     }
 
-    public Double getAnswerNumber() {
+    public BigDecimal getAnswerNumber() {
         return answerNumber;
     }
 
-    public void setAnswerNumber(Double answerNumber) {
+    public void setAnswerNumber(BigDecimal answerNumber) {
         this.answerNumber = answerNumber;
     }
 
@@ -105,19 +143,19 @@ public class ResponseQuestionResponse {
         this.answerDate = answerDate;
     }
 
-    public Integer getProvinceCode() {
+    public String getProvinceCode() {
         return provinceCode;
     }
 
-    public void setProvinceCode(Integer provinceCode) {
+    public void setProvinceCode(String provinceCode) {
         this.provinceCode = provinceCode;
     }
 
-    public Integer getWardCode() {
+    public String getWardCode() {
         return wardCode;
     }
 
-    public void setWardCode(Integer wardCode) {
+    public void setWardCode(String wardCode) {
         this.wardCode = wardCode;
     }
 
@@ -135,6 +173,14 @@ public class ResponseQuestionResponse {
 
     public void setWard(String ward) {
         this.ward = ward;
+    }
+
+    public String getAddressDetail() {
+        return addressDetail;
+    }
+
+    public void setAddressDetail(String addressDetail) {
+        this.addressDetail = addressDetail;
     }
 
     public List<Integer> getOptionIds() {

@@ -3,6 +3,7 @@ package com.trinhcong1120.survey_service.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,22 +30,25 @@ public class Answer {
   private String answerText;
 
   @Column(name = "answer_number")
-  private Double answerNumber;
+  private BigDecimal answerNumber;
 
   @Column(name = "answer_date")
   private LocalDateTime answerDate;
 
   @Column(name = "province_code")
-  private Integer provinceCode;
+  private String provinceCode;
 
   @Column(name = "ward_code")
-  private Integer wardCode;
+  private String wardCode;
 
   @Column(name = "province")
   private String province;
 
   @Column(name = "ward")
   private String ward;
+
+  @Column(name = "address_detail", columnDefinition = "TEXT")
+  private String addressDetail;
 
   @JsonIgnore
   @OneToMany(
@@ -68,23 +72,26 @@ public class Answer {
   public String getAnswerText() { return answerText; }
   public void setAnswerText(String answerText) { this.answerText = answerText; }
 
-  public Double getAnswerNumber() { return answerNumber; }
-  public void setAnswerNumber(Double answerNumber) { this.answerNumber = answerNumber; }
+  public BigDecimal getAnswerNumber() { return answerNumber; }
+  public void setAnswerNumber(BigDecimal answerNumber) { this.answerNumber = answerNumber; }
 
   public LocalDateTime getAnswerDate() { return answerDate; }
   public void setAnswerDate(LocalDateTime answerDate) { this.answerDate = answerDate; }
 
-  public Integer getProvinceCode() { return provinceCode; }
-  public void setProvinceCode(Integer provinceCode) { this.provinceCode = provinceCode; }
+  public String getProvinceCode() { return provinceCode; }
+  public void setProvinceCode(String provinceCode) { this.provinceCode = provinceCode; }
 
-  public Integer getWardCode() { return wardCode; }
-  public void setWardCode(Integer wardCode) { this.wardCode = wardCode; }
+  public String getWardCode() { return wardCode; }
+  public void setWardCode(String wardCode) { this.wardCode = wardCode; }
 
   public String getProvince() { return province; }
   public void setProvince(String province) { this.province = province; }
 
   public String getWard() { return ward; }
   public void setWard(String ward) { this.ward = ward; }
+
+  public String getAddressDetail() { return addressDetail; }
+  public void setAddressDetail(String addressDetail) { this.addressDetail = addressDetail; }
 
   public List<AnswerOption> getAnswerOptions() { return answerOptions; }
   public void setAnswerOptions(List<AnswerOption> answerOptions) {

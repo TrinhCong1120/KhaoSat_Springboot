@@ -1,5 +1,6 @@
 package com.trinhcong1120.survey_service.service;
 
+import com.trinhcong1120.survey_service.dto.media.MediaUploadResponse;
 import com.trinhcong1120.survey_service.dto.question.*;
 import com.trinhcong1120.survey_service.entity.*;
 import com.trinhcong1120.survey_service.entity.Option;
@@ -20,19 +21,28 @@ public class QuestionService {
   private final QuestionTypeRepository questionTypeRepository;
   private final OptionRepository optionRepository;
   private final AnswerOptionRepository answerOptionRepository;
+  private final SurveyRepository surveyRepository;
+  private final MediaFileRepository mediaFileRepository;
+  private final QuestionValidationRuleService questionValidationRuleService;
 
   public QuestionService(
           QuestionRepository questionRepository,
           PageRepository pageRepository,
           QuestionTypeRepository questionTypeRepository,
           OptionRepository optionRepository,
-          AnswerOptionRepository answerOptionRepository
+          AnswerOptionRepository answerOptionRepository,
+          SurveyRepository surveyRepository,
+          MediaFileRepository mediaFileRepository,
+          QuestionValidationRuleService questionValidationRuleService
   ) {
     this.questionRepository = questionRepository;
     this.pageRepository = pageRepository;
     this.questionTypeRepository = questionTypeRepository;
     this.optionRepository = optionRepository;
     this.answerOptionRepository = answerOptionRepository;
+    this.surveyRepository = surveyRepository;
+    this.mediaFileRepository = mediaFileRepository;
+    this.questionValidationRuleService = questionValidationRuleService;
   }
 
   @Transactional(readOnly = true)
@@ -65,6 +75,9 @@ public class QuestionService {
     question.setIsRequired(request.getIsRequired());
     question.setOrderIndex(request.getOrderIndex());
     question.setDescription(request.getDescription());
+    question.setImageUrl(request.getImageUrl());
+    question.setVideoUrl(request.getVideoUrl());
+    question.setAudioUrl(request.getAudioUrl());
 
     question = questionRepository.save(question);
 
@@ -73,6 +86,8 @@ public class QuestionService {
 
       createOptions(question, request.getOptions());
     }
+
+    bumpRevision(question);
 
     return toResponse(question);
   }
@@ -97,6 +112,9 @@ public class QuestionService {
     question.setIsRequired(request.getIsRequired());
     question.setOrderIndex(request.getOrderIndex());
     question.setDescription(request.getDescription());
+    question.setImageUrl(request.getImageUrl());
+    question.setVideoUrl(request.getVideoUrl());
+    question.setAudioUrl(request.getAudioUrl());
 
     questionRepository.save(question);
 
@@ -105,6 +123,9 @@ public class QuestionService {
     } else {
       removeUnusedOptions(question);
     }
+
+    questionRepository.save(question);
+    bumpRevision(question);
 
     return toResponse(question);
   }
@@ -127,24 +148,39 @@ public class QuestionService {
     }
 
     questionRepository.delete(question);
+    bumpRevision(question);
+  }
+
+  private void bumpRevision(Question question) {
+    if (question == null
+            || question.getPage() == null
+            || question.getPage().getSurvey() == null) {
+      return;
+    }
+
+    Survey survey = question.getPage().getSurvey();
+    survey.incrementValidationRevision();
+    surveyRepository.save(survey);
   }
 
   private void createOptions(
           Question question,
-          List<String> texts
+          List<OptionRequest> requests
   ) {
     int index = 1;
 
-    for (String text : texts) {
+    for (OptionRequest request : requests) {
 
-      if (text == null || text.isBlank()) {
+      if (request == null
+              || request.getOptionText() == null
+              || request.getOptionText().isBlank()) {
         continue;
       }
 
       Option option = new Option();
 
       option.setQuestion(question);
-      option.setOptionText(text.trim());
+      applyOptionRequest(option, request);
       option.setOrderIndex(index++);
 
       optionRepository.save(option);
@@ -153,7 +189,7 @@ public class QuestionService {
 
   private void updateOptions(
           Question question,
-          List<String> newTexts
+          List<OptionRequest> newOptions
   ) {
     List<Option> oldOptions =
             optionRepository
@@ -161,41 +197,42 @@ public class QuestionService {
                             question.getId()
                     );
 
-    if (newTexts == null) {
-      newTexts = new ArrayList<>();
+    if (newOptions == null) {
+      newOptions = new ArrayList<>();
     }
 
-    List<String> validTexts = newTexts.stream()
-            .filter(text ->
-                    text != null && !text.isBlank())
-            .map(String::trim)
+    List<OptionRequest> validOptions = newOptions.stream()
+            .filter(option ->
+                    option != null
+                            && option.getOptionText() != null
+                            && !option.getOptionText().isBlank())
             .toList();
 
     int common =
-            Math.min(oldOptions.size(), validTexts.size());
+            Math.min(oldOptions.size(), validOptions.size());
 
     for (int i = 0; i < common; i++) {
 
       Option option = oldOptions.get(i);
 
-      option.setOptionText(validTexts.get(i));
+      applyOptionRequest(option, validOptions.get(i));
       option.setOrderIndex(i + 1);
 
       optionRepository.save(option);
     }
 
-    for (int i = common; i < validTexts.size(); i++) {
+    for (int i = common; i < validOptions.size(); i++) {
 
       Option option = new Option();
 
       option.setQuestion(question);
-      option.setOptionText(validTexts.get(i));
+      applyOptionRequest(option, validOptions.get(i));
       option.setOrderIndex(i + 1);
 
       optionRepository.save(option);
     }
 
-    for (int i = validTexts.size();
+    for (int i = validOptions.size();
          i < oldOptions.size();
          i++) {
 
@@ -218,6 +255,16 @@ public class QuestionService {
         optionRepository.delete(option);
       }
     }
+  }
+
+  private void applyOptionRequest(
+          Option option,
+          OptionRequest request
+  ) {
+    option.setOptionText(request.getOptionText().trim());
+    option.setImageUrl(request.getImageUrl());
+    option.setVideoUrl(request.getVideoUrl());
+    option.setAudioUrl(request.getAudioUrl());
   }
 
   private void removeUnusedOptions(Question question) {
@@ -251,25 +298,72 @@ public class QuestionService {
                             question.getId()
                     )
                     .stream()
-                    .map(option ->
-                            new OptionResponse(
-                                    option.getId(),
-                                    option.getOptionText(),
-                                    option.getOrderIndex()
-                            )
-                    )
+                    .map(this::toOptionResponse)
                     .toList();
 
-    return new QuestionResponse(
+    QuestionResponse response = new QuestionResponse(
             question.getId(),
             question.getPage().getId(),
             question.getQuestionText(),
             question.getQuestionType().getId(),
             question.getQuestionType().getCode(),
+            question.getQuestionType().getName(),
             question.getIsRequired(),
             question.getOrderIndex(),
             question.getDescription(),
+            question.getImageUrl(),
+            question.getVideoUrl(),
+            question.getAudioUrl(),
             options
     );
+
+    response.setValidationRules(
+            questionValidationRuleService.getByQuestion(question.getId())
+    );
+    response.setMediaFiles(toMediaResponses("QUESTION", question.getId()));
+
+    return response;
+  }
+
+  private OptionResponse toOptionResponse(Option option) {
+    OptionResponse response = new OptionResponse(
+            option.getId(),
+            option.getOptionText(),
+            option.getImageUrl(),
+            option.getVideoUrl(),
+            option.getAudioUrl(),
+            option.getOrderIndex()
+    );
+
+    response.setMediaFiles(toMediaResponses("OPTION", option.getId()));
+    return response;
+  }
+
+  private List<MediaUploadResponse> toMediaResponses(
+          String ownerType,
+          Integer ownerId
+  ) {
+    return mediaFileRepository
+            .findByOwnerTypeAndOwnerIdOrderByUploadedAtDesc(ownerType, ownerId)
+            .stream()
+            .map(this::toMediaResponse)
+            .toList();
+  }
+
+  private MediaUploadResponse toMediaResponse(MediaFile mediaFile) {
+    MediaUploadResponse response = new MediaUploadResponse();
+    response.setId(mediaFile.getId());
+    response.setOwnerType(mediaFile.getOwnerType());
+    response.setOwnerId(mediaFile.getOwnerId());
+    response.setMediaType(mediaFile.getMediaType());
+    response.setOriginalFilename(mediaFile.getOriginalFilename());
+    response.setContentType(mediaFile.getContentType());
+    response.setSizeBytes(mediaFile.getSizeBytes());
+    response.setBucketName(mediaFile.getBucketName());
+    response.setObjectKey(mediaFile.getObjectKey());
+    response.setObjectUrl(mediaFile.getObjectUrl());
+    response.setCreatedByUserId(mediaFile.getCreatedByUserId());
+    response.setUploadedAt(mediaFile.getUploadedAt());
+    return response;
   }
 }

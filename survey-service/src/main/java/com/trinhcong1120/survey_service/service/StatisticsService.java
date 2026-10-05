@@ -10,6 +10,8 @@ import com.trinhcong1120.survey_service.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -211,7 +213,7 @@ public class StatisticsService {
   private NumberStatisticsResponse buildNumber(
           List<Answer> answers
   ) {
-    List<Double> values =
+    List<BigDecimal> values =
             answers.stream()
                     .map(Answer::getAnswerNumber)
                     .filter(Objects::nonNull)
@@ -223,24 +225,31 @@ public class StatisticsService {
               0L, null, null, null, null);
     }
 
-    double average =
+    BigDecimal sum =
             values.stream()
-                    .mapToDouble(Double::doubleValue)
-                    .average()
-                    .orElse(0);
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    double average =
+            sum.divide(
+                    BigDecimal.valueOf(values.size()),
+                    10,
+                    RoundingMode.HALF_UP
+            ).doubleValue();
 
     int size = values.size();
     double median =
             size % 2 == 0
-                    ? (values.get(size / 2 - 1)
-                    + values.get(size / 2)) / 2.0
-                    : values.get(size / 2);
+                    ? values.get(size / 2 - 1)
+                    .add(values.get(size / 2))
+                    .divide(BigDecimal.valueOf(2), 10, RoundingMode.HALF_UP)
+                    .doubleValue()
+                    : values.get(size / 2).doubleValue();
 
     return new NumberStatisticsResponse(
             (long) size,
             average,
-            values.get(0),
-            values.get(size - 1),
+            values.get(0).doubleValue(),
+            values.get(size - 1).doubleValue(),
             median
     );
   }

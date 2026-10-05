@@ -35,6 +35,15 @@ public class Question {
   @Column(name = "description", columnDefinition = "TEXT")
   private String description;
 
+  @Column(name = "image_url", columnDefinition = "TEXT")
+  private String imageUrl;
+
+  @Column(name = "video_url", columnDefinition = "TEXT")
+  private String videoUrl;
+
+  @Column(name = "audio_url", columnDefinition = "TEXT")
+  private String audioUrl;
+
   @JsonIgnore
   @OneToMany(mappedBy = "question", fetch = FetchType.LAZY)
   private List<Option> options = new ArrayList<>();
@@ -73,6 +82,15 @@ public class Question {
 
   public String getDescription() { return description; }
   public void setDescription(String description) { this.description = description; }
+
+  public String getImageUrl() { return imageUrl; }
+  public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+  public String getVideoUrl() { return videoUrl; }
+  public void setVideoUrl(String videoUrl) { this.videoUrl = videoUrl; }
+
+  public String getAudioUrl() { return audioUrl; }
+  public void setAudioUrl(String audioUrl) { this.audioUrl = audioUrl; }
 
   public List<Option> getOptions() { return options; }
   public void setOptions(List<Option> options) { this.options = options; }

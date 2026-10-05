@@ -8,13 +8,29 @@ public class UpdateSurveyRequest {
     private String title;
 
     private String description;
+    private String imageUrl;
+    private String videoUrl;
+    private String audioUrl;
 
     public UpdateSurveyRequest() {
     }
 
     public UpdateSurveyRequest(String title, String description) {
+        this(title, description, null, null, null);
+    }
+
+    public UpdateSurveyRequest(
+            String title,
+            String description,
+            String imageUrl,
+            String videoUrl,
+            String audioUrl
+    ) {
         this.title = title;
         this.description = description;
+        this.imageUrl = imageUrl;
+        this.videoUrl = videoUrl;
+        this.audioUrl = audioUrl;
     }
 
     public String getTitle() {
@@ -31,5 +47,29 @@ public class UpdateSurveyRequest {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
+    }
+
+    public String getAudioUrl() {
+        return audioUrl;
+    }
+
+    public void setAudioUrl(String audioUrl) {
+        this.audioUrl = audioUrl;
     }
 }

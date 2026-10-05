@@ -6,6 +6,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -34,6 +35,24 @@ public class GlobalExceptionHandler {
     );
   }
 
+  @ExceptionHandler(AnswerValidationException.class)
+  public ResponseEntity<Map<String, Object>> handleAnswerValidation(
+          AnswerValidationException ex
+  ) {
+
+    Map<String, Object> body = new LinkedHashMap<>();
+
+    body.put("timestamp", LocalDateTime.now());
+    body.put("status", HttpStatus.BAD_REQUEST.value());
+    body.put("error", HttpStatus.BAD_REQUEST.getReasonPhrase());
+    body.put("message", ex.getMessage());
+    body.put("fieldErrors", ex.getFieldErrors());
+
+    return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(body);
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<Map<String, Object>> handleValidation(
           MethodArgumentNotValidException ex
@@ -49,6 +68,18 @@ public class GlobalExceptionHandler {
     return buildResponse(
             HttpStatus.BAD_REQUEST,
             message
+    );
+  }
+
+  @ExceptionHandler(ResponseStatusException.class)
+  public ResponseEntity<Map<String, Object>> handleResponseStatus(
+          ResponseStatusException ex
+  ) {
+    HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+
+    return buildResponse(
+            status,
+            ex.getReason() == null ? status.getReasonPhrase() : ex.getReason()
     );
   }
 

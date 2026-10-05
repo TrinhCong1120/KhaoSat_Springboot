@@ -4,6 +4,7 @@ import com.trinhcong1120.survey_service.dto.condition.*;
 import com.trinhcong1120.survey_service.entity.Condition;
 import com.trinhcong1120.survey_service.entity.Option;
 import com.trinhcong1120.survey_service.entity.Question;
+import com.trinhcong1120.survey_service.entity.Survey;
 import com.trinhcong1120.survey_service.exception.BadRequestException;
 import com.trinhcong1120.survey_service.exception.NotFoundException;
 import com.trinhcong1120.survey_service.repository.*;
@@ -19,15 +20,18 @@ public class ConditionService {
   private final ConditionRepository conditionRepository;
   private final QuestionRepository questionRepository;
   private final OptionRepository optionRepository;
+  private final SurveyRepository surveyRepository;
 
   public ConditionService(
           ConditionRepository conditionRepository,
           QuestionRepository questionRepository,
-          OptionRepository optionRepository
+          OptionRepository optionRepository,
+          SurveyRepository surveyRepository
   ) {
     this.conditionRepository = conditionRepository;
     this.questionRepository = questionRepository;
     this.optionRepository = optionRepository;
+    this.surveyRepository = surveyRepository;
   }
 
   @Transactional(readOnly = true)
@@ -76,9 +80,10 @@ public class ConditionService {
     condition.setTargetQuestion(target);
     condition.setAction(action);
 
-    return toResponse(
-            conditionRepository.save(condition)
-    );
+    Condition saved = conditionRepository.save(condition);
+    bumpRevision(target);
+
+    return toResponse(saved);
   }
 
   public ConditionResponse update(
@@ -110,9 +115,10 @@ public class ConditionService {
             )
     );
 
-    return toResponse(
-            conditionRepository.save(condition)
-    );
+    Condition saved = conditionRepository.save(condition);
+    bumpRevision(target);
+
+    return toResponse(saved);
   }
 
   public void delete(Integer id) {
@@ -124,6 +130,19 @@ public class ConditionService {
                                     "Condition không tồn tại"));
 
     conditionRepository.delete(condition);
+    bumpRevision(condition.getTargetQuestion());
+  }
+
+  private void bumpRevision(Question question) {
+    if (question == null
+            || question.getPage() == null
+            || question.getPage().getSurvey() == null) {
+      return;
+    }
+
+    Survey survey = question.getPage().getSurvey();
+    survey.incrementValidationRevision();
+    surveyRepository.save(survey);
   }
 
   private Question getQuestion(Integer id) {

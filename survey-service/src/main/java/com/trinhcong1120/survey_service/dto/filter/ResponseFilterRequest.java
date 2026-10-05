@@ -1,5 +1,6 @@
 package com.trinhcong1120.survey_service.dto.filter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -12,7 +13,7 @@ public class ResponseFilterRequest {
     private Integer optionId;
 
     private String text;
-    private Double number;
+    private BigDecimal number;
     private LocalDate date;
 
     private String province;
@@ -61,11 +62,11 @@ public class ResponseFilterRequest {
         this.text = text;
     }
 
-    public Double getNumber() {
+    public BigDecimal getNumber() {
         return number;
     }
 
-    public void setNumber(Double number) {
+    public void setNumber(BigDecimal number) {
         this.number = number;
     }
 

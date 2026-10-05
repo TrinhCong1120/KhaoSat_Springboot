@@ -5,6 +5,7 @@ import com.trinhcong1120.survey_service.entity.AnswerOption;
 import com.trinhcong1120.survey_service.entity.Question;
 
 import java.time.format.DateTimeFormatter;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
@@ -94,16 +95,11 @@ public final class AnswerValueUtil {
       return null;
     }
 
-    Double value =
+    BigDecimal value =
             answer.getAnswerNumber();
 
-    if (value % 1 == 0) {
-      return String.valueOf(
-              value.longValue()
-      );
-    }
-
-    return String.valueOf(value);
+    return value.stripTrailingZeros()
+            .toPlainString();
   }
 
   public static String formatDate(Answer answer) {
@@ -130,19 +126,29 @@ public final class AnswerValueUtil {
     String ward =
             normalize(answer.getWard());
 
-    if (province == null && ward == null) {
+    String detail =
+            normalize(answer.getAddressDetail());
+
+    if (province == null && ward == null && detail == null) {
       return null;
     }
 
-    if (province == null) {
-      return ward;
+    List<String> parts =
+            java.util.stream.Stream.of(detail, ward, province)
+                    .filter(Objects::nonNull)
+                    .toList();
+
+    return String.join(" / ", parts);
+  }
+
+  public static boolean hasAddressValue(Answer answer) {
+    if (answer == null) {
+      return false;
     }
 
-    if (ward == null) {
-      return province;
-    }
-
-    return province + " / " + ward;
+    return normalize(answer.getProvince()) != null
+            || normalize(answer.getWard()) != null
+            || normalize(answer.getAddressDetail()) != null;
   }
 
   public static String formatText(Answer answer) {
@@ -192,8 +198,7 @@ public final class AnswerValueUtil {
               answer.getAnswerDate() != null;
 
       case "ADDRESS" ->
-              normalize(answer.getProvince()) != null
-                      && normalize(answer.getWard()) != null;
+              hasAddressValue(answer);
 
       default ->
               normalize(answer.getAnswerText()) != null;

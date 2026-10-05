@@ -21,6 +21,15 @@ public class Survey {
   @Column(name = "description", columnDefinition = "TEXT")
   private String description;
 
+  @Column(name = "image_url", columnDefinition = "TEXT")
+  private String imageUrl;
+
+  @Column(name = "video_url", columnDefinition = "TEXT")
+  private String videoUrl;
+
+  @Column(name = "audio_url", columnDefinition = "TEXT")
+  private String audioUrl;
+
   @Column(name = "creator_user")
   private String creatorUser;
 
@@ -32,6 +41,9 @@ public class Survey {
 
   @Column(name = "is_active")
   private Boolean isActive;
+
+  @Column(name = "validation_revision", nullable = false)
+  private Long validationRevision = 1L;
 
   @JsonIgnore
   @OneToMany(mappedBy = "survey", fetch = FetchType.LAZY)
@@ -52,6 +64,15 @@ public class Survey {
   public String getDescription() { return description; }
   public void setDescription(String description) { this.description = description; }
 
+  public String getImageUrl() { return imageUrl; }
+  public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+  public String getVideoUrl() { return videoUrl; }
+  public void setVideoUrl(String videoUrl) { this.videoUrl = videoUrl; }
+
+  public String getAudioUrl() { return audioUrl; }
+  public void setAudioUrl(String audioUrl) { this.audioUrl = audioUrl; }
+
   public String getCreatorUser() { return creatorUser; }
   public void setCreatorUser(String creatorUser) { this.creatorUser = creatorUser; }
 
@@ -63,6 +84,17 @@ public class Survey {
 
   public Boolean getIsActive() { return isActive; }
   public void setIsActive(Boolean active) { isActive = active; }
+
+  public Long getValidationRevision() { return validationRevision; }
+  public void setValidationRevision(Long validationRevision) {
+    this.validationRevision = validationRevision == null ? 1L : validationRevision;
+  }
+
+  public void incrementValidationRevision() {
+    this.validationRevision = this.validationRevision == null
+            ? 1L
+            : this.validationRevision + 1;
+  }
 
   public List<Page> getPages() { return pages; }
   public void setPages(List<Page> pages) { this.pages = pages; }
