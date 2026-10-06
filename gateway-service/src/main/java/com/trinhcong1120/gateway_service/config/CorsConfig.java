@@ -16,6 +16,7 @@ import java.util.List;
 public class CorsConfig {
 
   private final List<String> allowedOrigins;
+  private final List<String> allowedOriginPatterns;
   private final List<String> allowedMethods;
   private final List<String> allowedHeaders;
   private final List<String> exposedHeaders;
@@ -28,6 +29,9 @@ public class CorsConfig {
     this.allowedOrigins = binder
             .bind("app.cors.allowed-origins", Bindable.listOf(String.class))
             .orElse(List.of("http://localhost:3000"));
+    this.allowedOriginPatterns = binder
+            .bind("app.cors.allowed-origin-patterns", Bindable.listOf(String.class))
+            .orElse(List.of());
     this.allowedMethods = binder
             .bind("app.cors.allowed-methods", Bindable.listOf(String.class))
             .orElse(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
@@ -53,6 +57,7 @@ public class CorsConfig {
             new CorsConfiguration();
 
     configuration.setAllowedOrigins(allowedOrigins);
+    configuration.setAllowedOriginPatterns(allowedOriginPatterns);
     configuration.setAllowedMethods(allowedMethods);
     configuration.setAllowedHeaders(allowedHeaders);
     configuration.setExposedHeaders(exposedHeaders);

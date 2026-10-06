@@ -27,6 +27,13 @@ spring:
               predicates:
                 - Path=/api/Surveys/**,/api/Pages/**,/api/Responses/**,/api/Dashboard/**,/api/FailedSurveys/**,/api/Questions/**,/api/Reports/**,/api/Conditions/**,/api/Media/**,/api/public/surveys/**
 
+            - id: survey-media
+              uri: http://minio:9000
+              predicates:
+                - Path=/survey-media/**
+              filters:
+                - PreserveHostHeader
+
             - id: notification-service
               uri: lb://notification-service
               predicates:
@@ -57,8 +64,9 @@ app:
   cors:
     enabled: true
     allowed-origins:
-      - "https://7e07-2001-df2-9b00-1995-8186-f2f7-af0b-ffe9.ngrok-free.app"
       - "http://localhost:3000"
+    allowed-origin-patterns:
+      - "https://*.ngrok-free.app"
 
 
     allowed-methods:

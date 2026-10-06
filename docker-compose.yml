@@ -47,7 +47,6 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
       MINIO_DEFAULT_BUCKETS: ${MINIO_BUCKET:-survey-media}
       MINIO_BROWSER: "on"
-      MINIO_SERVER_URL: http://localhost:9000
       MINIO_API_CORS_ALLOW_ORIGIN: "*"
     ports:
       - "9000:9000"
@@ -143,7 +142,6 @@ services:
     environment:
       <<: *app-env
       MINIO_ENDPOINT: http://minio:9000
-      MINIO_PUBLIC_URL: http://localhost:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
       MINIO_BUCKET: ${MINIO_BUCKET:-survey-media}
