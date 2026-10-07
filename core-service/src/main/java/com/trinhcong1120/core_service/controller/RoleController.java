@@ -1,5 +1,7 @@
 package com.trinhcong1120.core_service.controller;
 
+import java.util.UUID;
+
 import com.trinhcong1120.core_service.dto.role.CreateRoleRequest;
 import com.trinhcong1120.core_service.dto.role.RoleDetailResponse;
 import com.trinhcong1120.core_service.dto.role.RoleResponse;
@@ -35,7 +37,7 @@ public class RoleController {
     @PreAuthorize("hasAuthority('role_view')")
     @GetMapping("/{id}")
     public ResponseEntity<RoleDetailResponse> getRoleById(
-            @PathVariable Integer id) {
+            @PathVariable UUID id) {
 
         return ResponseEntity.ok(
                 roleService.getRoleById(id)
@@ -55,7 +57,7 @@ public class RoleController {
     @PreAuthorize("hasAuthority('role_update')")
     @PutMapping("/{id}")
     public ResponseEntity<String> updateRole(
-            @PathVariable Integer id,
+            @PathVariable UUID id,
             @Valid @RequestBody UpdateRoleRequest request) {
 
         roleService.updateRole(id, request);
@@ -70,7 +72,7 @@ public class RoleController {
     @PreAuthorize("hasAuthority('role_delete')")
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteRole(
-            @PathVariable Integer id) {
+            @PathVariable UUID id) {
 
         roleService.deleteRole(id);
 

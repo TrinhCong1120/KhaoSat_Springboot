@@ -1,18 +1,20 @@
 package com.trinhcong1120.survey_service.dto.condition;
 
+import java.util.UUID;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public class CreateConditionRequest {
 
     @NotNull(message = "ID câu hỏi nguồn không được để trống")
-    private Integer sourceQuestionId;
+    private UUID sourceQuestionId;
 
     @NotBlank(message = "Giá trị điều kiện không được để trống")
     private String sourceValue;
 
     @NotNull(message = "ID câu hỏi đích không được để trống")
-    private Integer targetQuestionId;
+    private UUID targetQuestionId;
 
     @NotBlank(message = "Hành động điều kiện không được để trống")
     private String action;
@@ -20,11 +22,11 @@ public class CreateConditionRequest {
     public CreateConditionRequest() {
     }
 
-    public Integer getSourceQuestionId() {
+    public UUID getSourceQuestionId() {
         return sourceQuestionId;
     }
 
-    public void setSourceQuestionId(Integer sourceQuestionId) {
+    public void setSourceQuestionId(UUID sourceQuestionId) {
         this.sourceQuestionId = sourceQuestionId;
     }
 
@@ -36,11 +38,11 @@ public class CreateConditionRequest {
         this.sourceValue = sourceValue;
     }
 
-    public Integer getTargetQuestionId() {
+    public UUID getTargetQuestionId() {
         return targetQuestionId;
     }
 
-    public void setTargetQuestionId(Integer targetQuestionId) {
+    public void setTargetQuestionId(UUID targetQuestionId) {
         this.targetQuestionId = targetQuestionId;
     }
 

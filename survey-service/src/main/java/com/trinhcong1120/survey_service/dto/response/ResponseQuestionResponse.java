@@ -1,5 +1,8 @@
 package com.trinhcong1120.survey_service.dto.response;
 
+import com.trinhcong1120.survey_service.dto.media.MediaUploadResponse;
+import java.util.UUID;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -7,14 +10,12 @@ import java.util.List;
 
 public class ResponseQuestionResponse {
 
-    private Integer questionId;
+    private UUID questionId;
     private String questionText;
     private String description;
-    private String imageUrl;
-    private String videoUrl;
-    private String audioUrl;
+    private List<MediaUploadResponse> mediaFiles = new ArrayList<>();
 
-    private Integer questionTypeId;
+    private UUID questionTypeId;
     private String questionTypeCode;
 
     private Boolean isRequired;
@@ -31,7 +32,7 @@ public class ResponseQuestionResponse {
     private String ward;
     private String addressDetail;
 
-    private List<Integer> optionIds = new ArrayList<>();
+    private List<UUID> optionIds = new ArrayList<>();
     private List<String> optionTexts = new ArrayList<>();
 
     private String formattedAnswer;
@@ -39,11 +40,11 @@ public class ResponseQuestionResponse {
     public ResponseQuestionResponse() {
     }
 
-    public Integer getQuestionId() {
+    public UUID getQuestionId() {
         return questionId;
     }
 
-    public void setQuestionId(Integer questionId) {
+    public void setQuestionId(UUID questionId) {
         this.questionId = questionId;
     }
 
@@ -63,35 +64,19 @@ public class ResponseQuestionResponse {
         this.description = description;
     }
 
-    public String getImageUrl() {
-        return imageUrl;
+    public List<MediaUploadResponse> getMediaFiles() {
+        return mediaFiles;
     }
 
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
+    public void setMediaFiles(List<MediaUploadResponse> mediaFiles) {
+        this.mediaFiles = mediaFiles;
     }
 
-    public String getVideoUrl() {
-        return videoUrl;
-    }
-
-    public void setVideoUrl(String videoUrl) {
-        this.videoUrl = videoUrl;
-    }
-
-    public String getAudioUrl() {
-        return audioUrl;
-    }
-
-    public void setAudioUrl(String audioUrl) {
-        this.audioUrl = audioUrl;
-    }
-
-    public Integer getQuestionTypeId() {
+    public UUID getQuestionTypeId() {
         return questionTypeId;
     }
 
-    public void setQuestionTypeId(Integer questionTypeId) {
+    public void setQuestionTypeId(UUID questionTypeId) {
         this.questionTypeId = questionTypeId;
     }
 
@@ -183,11 +168,11 @@ public class ResponseQuestionResponse {
         this.addressDetail = addressDetail;
     }
 
-    public List<Integer> getOptionIds() {
+    public List<UUID> getOptionIds() {
         return optionIds;
     }
 
-    public void setOptionIds(List<Integer> optionIds) {
+    public void setOptionIds(List<UUID> optionIds) {
         this.optionIds = optionIds;
     }
 

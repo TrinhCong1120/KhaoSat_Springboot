@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.dto.survey;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.dto.condition.ConditionResponse;
 import com.trinhcong1120.survey_service.dto.media.MediaUploadResponse;
 import com.trinhcong1120.survey_service.dto.question.QuestionResponse;
@@ -10,13 +12,11 @@ import java.util.List;
 
 public class SurveyDetailResponse {
 
-    private Integer id;
+    private UUID id;
     private String title;
     private String description;
-    private String imageUrl;
-    private String videoUrl;
-    private String audioUrl;
     private String creatorUser;
+    private UUID creatorUserId;
     private LocalDateTime createdAt;
     private Boolean isActive;
     private Long validationRevision;
@@ -28,11 +28,11 @@ public class SurveyDetailResponse {
     public SurveyDetailResponse() {
     }
 
-    public Integer getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
@@ -52,33 +52,12 @@ public class SurveyDetailResponse {
         this.description = description;
     }
 
-    public String getImageUrl() {
-        return imageUrl;
-    }
-
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
-    }
-
-    public String getVideoUrl() {
-        return videoUrl;
-    }
-
-    public void setVideoUrl(String videoUrl) {
-        this.videoUrl = videoUrl;
-    }
-
-    public String getAudioUrl() {
-        return audioUrl;
-    }
-
-    public void setAudioUrl(String audioUrl) {
-        this.audioUrl = audioUrl;
-    }
-
     public String getCreatorUser() {
         return creatorUser;
     }
+
+    public UUID getCreatorUserId() { return creatorUserId; }
+    public void setCreatorUserId(UUID creatorUserId) { this.creatorUserId = creatorUserId; }
 
     public void setCreatorUser(String creatorUser) {
         this.creatorUser = creatorUser;
@@ -134,12 +113,9 @@ public class SurveyDetailResponse {
 
     public static class PageDetailResponse {
 
-        private Integer id;
+        private UUID id;
         private String title;
         private String description;
-        private String imageUrl;
-        private String videoUrl;
-        private String audioUrl;
         private Integer orderIndex;
         private List<MediaUploadResponse> mediaFiles = new ArrayList<>();
 
@@ -149,39 +125,33 @@ public class SurveyDetailResponse {
         }
 
         public PageDetailResponse(
-                Integer id,
+                UUID id,
                 String title,
                 Integer orderIndex,
                 List<QuestionResponse> questions
         ) {
-            this(id, title, null, null, null, null, orderIndex, questions);
+            this(id, title, null, orderIndex, questions);
         }
 
         public PageDetailResponse(
-                Integer id,
+                UUID id,
                 String title,
                 String description,
-                String imageUrl,
-                String videoUrl,
-                String audioUrl,
                 Integer orderIndex,
                 List<QuestionResponse> questions
         ) {
             this.id = id;
             this.title = title;
             this.description = description;
-            this.imageUrl = imageUrl;
-            this.videoUrl = videoUrl;
-            this.audioUrl = audioUrl;
             this.orderIndex = orderIndex;
             this.questions = questions;
         }
 
-        public Integer getId() {
+        public UUID getId() {
             return id;
         }
 
-        public void setId(Integer id) {
+        public void setId(UUID id) {
             this.id = id;
         }
 
@@ -199,30 +169,6 @@ public class SurveyDetailResponse {
 
         public void setDescription(String description) {
             this.description = description;
-        }
-
-        public String getImageUrl() {
-            return imageUrl;
-        }
-
-        public void setImageUrl(String imageUrl) {
-            this.imageUrl = imageUrl;
-        }
-
-        public String getVideoUrl() {
-            return videoUrl;
-        }
-
-        public void setVideoUrl(String videoUrl) {
-            this.videoUrl = videoUrl;
-        }
-
-        public String getAudioUrl() {
-            return audioUrl;
-        }
-
-        public void setAudioUrl(String audioUrl) {
-            this.audioUrl = audioUrl;
         }
 
         public Integer getOrderIndex() {

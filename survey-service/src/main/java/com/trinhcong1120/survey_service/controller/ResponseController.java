@@ -1,11 +1,12 @@
 package com.trinhcong1120.survey_service.controller;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.dto.filter.ResponseFilterRequest;
 import com.trinhcong1120.survey_service.dto.response.ResponseDetailResponse;
 import com.trinhcong1120.survey_service.dto.response.ResponseListResponse;
 import com.trinhcong1120.survey_service.service.ResponseService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,10 +24,9 @@ public class ResponseController {
   }
 
   @GetMapping("/survey/{surveyId}")
-  @PreAuthorize("hasAuthority('survey_view')")
   public ResponseEntity<List<ResponseListResponse>>
   getBySurvey(
-          @PathVariable Integer surveyId
+          @PathVariable UUID surveyId
   ) {
     return ResponseEntity.ok(
             responseService.getBySurvey(
@@ -36,10 +36,9 @@ public class ResponseController {
   }
 
   @PostMapping("/survey/{surveyId}/filter")
-  @PreAuthorize("hasAuthority('survey_view')")
   public ResponseEntity<List<ResponseListResponse>>
   filter(
-          @PathVariable Integer surveyId,
+          @PathVariable UUID surveyId,
           @RequestBody ResponseFilterRequest request
   ) {
     return ResponseEntity.ok(
@@ -51,9 +50,8 @@ public class ResponseController {
   }
 
   @GetMapping("/{responseId}")
-  @PreAuthorize("hasAuthority('survey_view')")
   public ResponseEntity<ResponseDetailResponse> getDetail(
-          @PathVariable Integer responseId
+          @PathVariable UUID responseId
   ) {
     return ResponseEntity.ok(
             responseService.getDetail(

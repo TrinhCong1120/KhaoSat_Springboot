@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.controller;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.dto.submit.SubmitSurveyRequest;
 import com.trinhcong1120.survey_service.dto.submit.SubmitSurveyResponse;
 import com.trinhcong1120.survey_service.dto.survey.SurveyDetailResponse;
@@ -24,7 +26,7 @@ public class PublicSurveyController {
 
   @GetMapping("/{surveyId}")
   public ResponseEntity<SurveyDetailResponse> getSurvey(
-          @PathVariable Integer surveyId
+          @PathVariable UUID surveyId
   ) {
     return ResponseEntity.ok(
             publicSurveyService
@@ -34,7 +36,7 @@ public class PublicSurveyController {
 
   @PostMapping("/{surveyId}/submit")
   public ResponseEntity<SubmitSurveyResponse> submit(
-          @PathVariable Integer surveyId,
+          @PathVariable UUID surveyId,
           @Valid @RequestBody SubmitSurveyRequest request
   ) {
     return ResponseEntity.ok(
@@ -47,7 +49,7 @@ public class PublicSurveyController {
 
   @PostMapping("/{surveyId}/validate")
   public ResponseEntity<ValidateSurveyResponse> validate(
-          @PathVariable Integer surveyId,
+          @PathVariable UUID surveyId,
           @Valid @RequestBody ValidateSurveyRequest request
   ) {
     return ResponseEntity.ok(

@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.dto.question;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.dto.media.MediaUploadResponse;
 import com.trinhcong1120.survey_service.dto.validation.QuestionValidationRuleResponse;
 import java.util.ArrayList;
@@ -7,12 +9,12 @@ import java.util.List;
 
 public class QuestionResponse {
 
-    private Integer id;
-    private Integer pageId;
+    private UUID id;
+    private UUID pageId;
 
     private String questionText;
 
-    private Integer questionTypeId;
+    private UUID questionTypeId;
     private String questionTypeCode;
     private QuestionTypeResponse questionType;
 
@@ -20,9 +22,6 @@ public class QuestionResponse {
     private Integer orderIndex;
 
     private String description;
-    private String imageUrl;
-    private String videoUrl;
-    private String audioUrl;
 
     private List<OptionResponse> options;
     private List<QuestionValidationRuleResponse> validationRules = new ArrayList<>();
@@ -32,10 +31,10 @@ public class QuestionResponse {
     }
 
     public QuestionResponse(
-            Integer id,
-            Integer pageId,
+            UUID id,
+            UUID pageId,
             String questionText,
-            Integer questionTypeId,
+            UUID questionTypeId,
             String questionTypeCode,
             Boolean isRequired,
             Integer orderIndex,
@@ -48,89 +47,24 @@ public class QuestionResponse {
                 questionText,
                 questionTypeId,
                 questionTypeCode,
+                null,
                 isRequired,
                 orderIndex,
                 description,
-                null,
-                null,
-                null,
                 options
         );
     }
 
     public QuestionResponse(
-            Integer id,
-            Integer pageId,
+            UUID id,
+            UUID pageId,
             String questionText,
-            Integer questionTypeId,
-            String questionTypeCode,
-            Boolean isRequired,
-            Integer orderIndex,
-            String description,
-            String imageUrl,
-            String videoUrl,
-            String audioUrl,
-            List<OptionResponse> options
-    ) {
-        this(
-                id,
-                pageId,
-                questionText,
-                questionTypeId,
-                questionTypeCode,
-                null,
-                isRequired,
-                orderIndex,
-                description,
-                imageUrl,
-                videoUrl,
-                audioUrl,
-                options
-        );
-    }
-
-    public QuestionResponse(
-            Integer id,
-            Integer pageId,
-            String questionText,
-            Integer questionTypeId,
+            UUID questionTypeId,
             String questionTypeCode,
             String questionTypeName,
             Boolean isRequired,
             Integer orderIndex,
             String description,
-            List<OptionResponse> options
-    ) {
-        this(
-                id,
-                pageId,
-                questionText,
-                questionTypeId,
-                questionTypeCode,
-                questionTypeName,
-                isRequired,
-                orderIndex,
-                description,
-                null,
-                null,
-                null,
-                options
-        );
-    }
-
-    public QuestionResponse(
-            Integer id,
-            Integer pageId,
-            String questionText,
-            Integer questionTypeId,
-            String questionTypeCode,
-            String questionTypeName,
-            Boolean isRequired,
-            Integer orderIndex,
-            String description,
-            String imageUrl,
-            String videoUrl,
-            String audioUrl,
             List<OptionResponse> options
     ) {
         this.id = id;
@@ -146,25 +80,22 @@ public class QuestionResponse {
         this.isRequired = isRequired;
         this.orderIndex = orderIndex;
         this.description = description;
-        this.imageUrl = imageUrl;
-        this.videoUrl = videoUrl;
-        this.audioUrl = audioUrl;
         this.options = options;
     }
 
-    public Integer getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
-    public Integer getPageId() {
+    public UUID getPageId() {
         return pageId;
     }
 
-    public void setPageId(Integer pageId) {
+    public void setPageId(UUID pageId) {
         this.pageId = pageId;
     }
 
@@ -176,11 +107,11 @@ public class QuestionResponse {
         this.questionText = questionText;
     }
 
-    public Integer getQuestionTypeId() {
+    public UUID getQuestionTypeId() {
         return questionTypeId;
     }
 
-    public void setQuestionTypeId(Integer questionTypeId) {
+    public void setQuestionTypeId(UUID questionTypeId) {
         this.questionTypeId = questionTypeId;
     }
 
@@ -222,30 +153,6 @@ public class QuestionResponse {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public String getImageUrl() {
-        return imageUrl;
-    }
-
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
-    }
-
-    public String getVideoUrl() {
-        return videoUrl;
-    }
-
-    public void setVideoUrl(String videoUrl) {
-        this.videoUrl = videoUrl;
-    }
-
-    public String getAudioUrl() {
-        return audioUrl;
-    }
-
-    public void setAudioUrl(String audioUrl) {
-        this.audioUrl = audioUrl;
     }
 
     public List<OptionResponse> getOptions() {

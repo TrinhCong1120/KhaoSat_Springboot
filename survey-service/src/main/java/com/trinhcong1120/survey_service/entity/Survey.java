@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.entity;
 
+import java.util.UUID;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
@@ -12,8 +14,8 @@ import java.util.List;
 public class Survey {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Integer id;
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private UUID id;
 
   @Column(name = "title", length = 500)
   private String title;
@@ -21,20 +23,11 @@ public class Survey {
   @Column(name = "description", columnDefinition = "TEXT")
   private String description;
 
-  @Column(name = "image_url", columnDefinition = "TEXT")
-  private String imageUrl;
-
-  @Column(name = "video_url", columnDefinition = "TEXT")
-  private String videoUrl;
-
-  @Column(name = "audio_url", columnDefinition = "TEXT")
-  private String audioUrl;
-
   @Column(name = "creator_user")
   private String creatorUser;
 
-  @Column(name = "creator_password", length = 500)
-  private String creatorPassword;
+  @Column(name = "creator_user_id")
+  private UUID creatorUserId;
 
   @Column(name = "created_at")
   private LocalDateTime createdAt;
@@ -55,8 +48,8 @@ public class Survey {
 
   public Survey() {}
 
-  public Integer getId() { return id; }
-  public void setId(Integer id) { this.id = id; }
+  public UUID getId() { return id; }
+  public void setId(UUID id) { this.id = id; }
 
   public String getTitle() { return title; }
   public void setTitle(String title) { this.title = title; }
@@ -64,20 +57,10 @@ public class Survey {
   public String getDescription() { return description; }
   public void setDescription(String description) { this.description = description; }
 
-  public String getImageUrl() { return imageUrl; }
-  public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
-
-  public String getVideoUrl() { return videoUrl; }
-  public void setVideoUrl(String videoUrl) { this.videoUrl = videoUrl; }
-
-  public String getAudioUrl() { return audioUrl; }
-  public void setAudioUrl(String audioUrl) { this.audioUrl = audioUrl; }
-
   public String getCreatorUser() { return creatorUser; }
   public void setCreatorUser(String creatorUser) { this.creatorUser = creatorUser; }
-
-  public String getCreatorPassword() { return creatorPassword; }
-  public void setCreatorPassword(String creatorPassword) { this.creatorPassword = creatorPassword; }
+  public UUID getCreatorUserId() { return creatorUserId; }
+  public void setCreatorUserId(UUID creatorUserId) { this.creatorUserId = creatorUserId; }
 
   public LocalDateTime getCreatedAt() { return createdAt; }
   public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

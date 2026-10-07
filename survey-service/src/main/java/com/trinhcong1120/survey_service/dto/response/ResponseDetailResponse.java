@@ -1,18 +1,18 @@
 package com.trinhcong1120.survey_service.dto.response;
 
+import com.trinhcong1120.survey_service.dto.media.MediaUploadResponse;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 public class ResponseDetailResponse {
 
-    private Integer id;
-    private Integer surveyId;
+    private UUID id;
+    private UUID surveyId;
     private String surveyTitle;
     private String surveyDescription;
-    private String surveyImageUrl;
-    private String surveyVideoUrl;
-    private String surveyAudioUrl;
+    private List<MediaUploadResponse> mediaFiles = new ArrayList<>();
 
     private UUID requestId;
     private LocalDateTime submittedAt;
@@ -23,24 +23,21 @@ public class ResponseDetailResponse {
     }
 
     public ResponseDetailResponse(
-            Integer id,
-            Integer surveyId,
+            UUID id,
+            UUID surveyId,
             String surveyTitle,
             UUID requestId,
             LocalDateTime submittedAt,
             List<ResponsePageResponse> pages
     ) {
-        this(id, surveyId, surveyTitle, null, null, null, null, requestId, submittedAt, pages);
+        this(id, surveyId, surveyTitle, null, requestId, submittedAt, pages);
     }
 
     public ResponseDetailResponse(
-            Integer id,
-            Integer surveyId,
+            UUID id,
+            UUID surveyId,
             String surveyTitle,
             String surveyDescription,
-            String surveyImageUrl,
-            String surveyVideoUrl,
-            String surveyAudioUrl,
             UUID requestId,
             LocalDateTime submittedAt,
             List<ResponsePageResponse> pages
@@ -49,27 +46,24 @@ public class ResponseDetailResponse {
         this.surveyId = surveyId;
         this.surveyTitle = surveyTitle;
         this.surveyDescription = surveyDescription;
-        this.surveyImageUrl = surveyImageUrl;
-        this.surveyVideoUrl = surveyVideoUrl;
-        this.surveyAudioUrl = surveyAudioUrl;
         this.requestId = requestId;
         this.submittedAt = submittedAt;
         this.pages = pages;
     }
 
-    public Integer getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
-    public Integer getSurveyId() {
+    public UUID getSurveyId() {
         return surveyId;
     }
 
-    public void setSurveyId(Integer surveyId) {
+    public void setSurveyId(UUID surveyId) {
         this.surveyId = surveyId;
     }
 
@@ -89,28 +83,12 @@ public class ResponseDetailResponse {
         this.surveyDescription = surveyDescription;
     }
 
-    public String getSurveyImageUrl() {
-        return surveyImageUrl;
+    public List<MediaUploadResponse> getMediaFiles() {
+        return mediaFiles;
     }
 
-    public void setSurveyImageUrl(String surveyImageUrl) {
-        this.surveyImageUrl = surveyImageUrl;
-    }
-
-    public String getSurveyVideoUrl() {
-        return surveyVideoUrl;
-    }
-
-    public void setSurveyVideoUrl(String surveyVideoUrl) {
-        this.surveyVideoUrl = surveyVideoUrl;
-    }
-
-    public String getSurveyAudioUrl() {
-        return surveyAudioUrl;
-    }
-
-    public void setSurveyAudioUrl(String surveyAudioUrl) {
-        this.surveyAudioUrl = surveyAudioUrl;
+    public void setMediaFiles(List<MediaUploadResponse> mediaFiles) {
+        this.mediaFiles = mediaFiles;
     }
 
     public UUID getRequestId() {

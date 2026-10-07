@@ -1,8 +1,10 @@
 package com.trinhcong1120.core_service.dto.function;
 
+import java.util.UUID;
+
 public class FunctionResponse {
 
-    private Integer id;
+    private UUID id;
     private String name;
     private String code;
 
@@ -10,7 +12,7 @@ public class FunctionResponse {
     }
 
     public FunctionResponse(
-            Integer id,
+            UUID id,
             String name,
             String code) {
 
@@ -19,7 +21,7 @@ public class FunctionResponse {
         this.code = code;
     }
 
-    public Integer getId() {
+    public UUID getId() {
         return id;
     }
 

@@ -1,8 +1,10 @@
 package com.trinhcong1120.survey_service.dto.dashboard;
 
+import java.util.UUID;
+
 public class TopSurveyResponse {
 
-    private Integer surveyId;
+    private UUID surveyId;
     private String title;
     private Double completionPercent;
     private Long responseCount;
@@ -11,7 +13,7 @@ public class TopSurveyResponse {
     }
 
     public TopSurveyResponse(
-            Integer surveyId,
+            UUID surveyId,
             String title,
             Double completionPercent,
             Long responseCount
@@ -22,11 +24,11 @@ public class TopSurveyResponse {
         this.responseCount = responseCount;
     }
 
-    public Integer getSurveyId() {
+    public UUID getSurveyId() {
         return surveyId;
     }
 
-    public void setSurveyId(Integer surveyId) {
+    public void setSurveyId(UUID surveyId) {
         this.surveyId = surveyId;
     }
 

@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.controller;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.dto.condition.*;
 import com.trinhcong1120.survey_service.service.ConditionService;
 import jakarta.validation.Valid;
@@ -30,7 +32,7 @@ public class ConditionController {
 
   @GetMapping("/survey/{surveyId}")
   public ResponseEntity<List<ConditionResponse>> getBySurvey(
-          @PathVariable Integer surveyId
+          @PathVariable UUID surveyId
   ) {
     return ResponseEntity.ok(
             conditionService.getBySurvey(
@@ -50,7 +52,7 @@ public class ConditionController {
 
   @PutMapping("/{id}")
   public ResponseEntity<ConditionResponse> update(
-          @PathVariable Integer id,
+          @PathVariable UUID id,
           @Valid @RequestBody UpdateConditionRequest request
   ) {
     return ResponseEntity.ok(
@@ -63,7 +65,7 @@ public class ConditionController {
 
   @DeleteMapping("/{id}")
   public ResponseEntity<Map<String, String>> delete(
-          @PathVariable Integer id
+          @PathVariable UUID id
   ) {
     conditionService.delete(id);
 

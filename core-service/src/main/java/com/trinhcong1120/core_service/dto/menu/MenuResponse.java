@@ -1,30 +1,32 @@
 package com.trinhcong1120.core_service.dto.menu;
 
+import java.util.UUID;
+
 import java.time.LocalDateTime;
 
 public class MenuResponse {
 
-    private Integer id;
+    private UUID id;
     private String name;
     private String path;
-    private Integer parentId;
+    private UUID parentId;
     private String icon;
     private Integer orderIndex;
     private LocalDateTime createdAt;
-    private Integer functionId;
+    private UUID functionId;
 
     public MenuResponse() {
     }
 
     public MenuResponse(
-            Integer id,
+            UUID id,
             String name,
             String path,
-            Integer parentId,
+            UUID parentId,
             String icon,
             Integer orderIndex,
             LocalDateTime createdAt,
-            Integer functionId
+            UUID functionId
     ) {
         this.id = id;
         this.name = name;
@@ -36,11 +38,11 @@ public class MenuResponse {
         this.functionId = functionId;
     }
 
-    public Integer getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
@@ -60,11 +62,11 @@ public class MenuResponse {
         this.path = path;
     }
 
-    public Integer getParentId() {
+    public UUID getParentId() {
         return parentId;
     }
 
-    public void setParentId(Integer parentId) {
+    public void setParentId(UUID parentId) {
         this.parentId = parentId;
     }
 
@@ -92,11 +94,11 @@ public class MenuResponse {
         this.createdAt = createdAt;
     }
 
-    public Integer getFunctionId() {
+    public UUID getFunctionId() {
         return functionId;
     }
 
-    public void setFunctionId(Integer functionId) {
+    public void setFunctionId(UUID functionId) {
         this.functionId = functionId;
     }
 }

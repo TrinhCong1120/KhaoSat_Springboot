@@ -1,5 +1,7 @@
 package com.trinhcong1120.auth_service.entity;
 
+import java.util.UUID;
+
 import jakarta.persistence.*;
 
 @Entity
@@ -7,14 +9,17 @@ import jakarta.persistence.*;
 public class Permission {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @Column(name = "code", nullable = false)
     private String code;
 
     @Column(name = "name", nullable = false)
     private String name;
+
+    @Column(name = "type", nullable = false)
+    private String type;
 
     @Column(name = "http_method", nullable = false)
     private String httpMethod;
@@ -25,7 +30,7 @@ public class Permission {
     public Permission() {
     }
 
-    public Integer getId() {
+    public UUID getId() {
         return id;
     }
 
@@ -36,6 +41,8 @@ public class Permission {
     public String getName() {
         return name;
     }
+
+    public String getType() { return type; }
 
     public String getHttpMethod() {
         return httpMethod;

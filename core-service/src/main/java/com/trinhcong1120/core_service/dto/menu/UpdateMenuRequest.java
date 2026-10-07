@@ -1,5 +1,7 @@
 package com.trinhcong1120.core_service.dto.menu;
 
+import java.util.UUID;
+
 import jakarta.validation.constraints.NotBlank;
 
 public class UpdateMenuRequest {
@@ -8,10 +10,10 @@ public class UpdateMenuRequest {
     private String name;
 
     private String path;
-    private Integer parentId;
+    private UUID parentId;
     private String icon;
     private Integer orderIndex;
-    private Integer functionId;
+    private UUID functionId;
 
     public UpdateMenuRequest() {
     }
@@ -32,11 +34,11 @@ public class UpdateMenuRequest {
         this.path = path;
     }
 
-    public Integer getParentId() {
+    public UUID getParentId() {
         return parentId;
     }
 
-    public void setParentId(Integer parentId) {
+    public void setParentId(UUID parentId) {
         this.parentId = parentId;
     }
 
@@ -56,11 +58,11 @@ public class UpdateMenuRequest {
         this.orderIndex = orderIndex;
     }
 
-    public Integer getFunctionId() {
+    public UUID getFunctionId() {
         return functionId;
     }
 
-    public void setFunctionId(Integer functionId) {
+    public void setFunctionId(UUID functionId) {
         this.functionId = functionId;
     }
 }

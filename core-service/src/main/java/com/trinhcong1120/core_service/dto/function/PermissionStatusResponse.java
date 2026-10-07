@@ -1,8 +1,12 @@
 package com.trinhcong1120.core_service.dto.function;
 
+import java.util.UUID;
+
 public class PermissionStatusResponse {
 
-    private Integer permissionID;
+    private UUID permissionID;
+    private String code;
+    private String type;
     private String action;
     private Boolean isActive;
 
@@ -10,18 +14,25 @@ public class PermissionStatusResponse {
     }
 
     public PermissionStatusResponse(
-            Integer permissionID,
+            UUID permissionID,
+            String code,
+            String type,
             String action,
             Boolean isActive) {
 
         this.permissionID = permissionID;
+        this.code = code;
+        this.type = type;
         this.action = action;
         this.isActive = isActive;
     }
 
-    public Integer getPermissionID() {
+    public UUID getPermissionID() {
         return permissionID;
     }
+
+    public String getCode() { return code; }
+    public String getType() { return type; }
 
     public String getAction() {
         return action;

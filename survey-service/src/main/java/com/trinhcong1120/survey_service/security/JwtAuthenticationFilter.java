@@ -9,20 +9,24 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private final JwtService jwtService;
+  private final JdbcTemplate jdbc;
 
-  public JwtAuthenticationFilter(JwtService jwtService) {
+  public JwtAuthenticationFilter(JwtService jwtService, JdbcTemplate jdbc) {
     this.jwtService = jwtService;
+    this.jdbc = jdbc;
   }
 
   @Override
@@ -56,6 +60,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       }
 
       if (userId == null) {
+        filterChain.doFilter(request, response);
+        return;
+      }
+
+      Integer activeUserCount = jdbc.queryForObject(
+              "SELECT count(*) FROM users WHERE id = ? AND is_active IS TRUE",
+              Integer.class,
+              UUID.fromString(userId)
+      );
+      if (activeUserCount == null || activeUserCount == 0) {
         filterChain.doFilter(request, response);
         return;
       }

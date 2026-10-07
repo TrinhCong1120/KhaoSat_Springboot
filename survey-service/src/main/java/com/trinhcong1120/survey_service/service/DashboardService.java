@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.service;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.dto.dashboard.*;
 import com.trinhcong1120.survey_service.entity.*;
 import com.trinhcong1120.survey_service.entity.Response;
@@ -15,6 +17,7 @@ import java.util.*;
 public class DashboardService {
 
   private final SurveyRepository surveyRepository;
+  private final com.trinhcong1120.survey_service.security.SurveyAccessGuard guard;
   private final PageRepository pageRepository;
   private final QuestionRepository questionRepository;
   private final ResponseRepository responseRepository;
@@ -22,12 +25,14 @@ public class DashboardService {
 
   public DashboardService(
           SurveyRepository surveyRepository,
+          com.trinhcong1120.survey_service.security.SurveyAccessGuard guard,
           PageRepository pageRepository,
           QuestionRepository questionRepository,
           ResponseRepository responseRepository,
           AnswerRepository answerRepository
   ) {
     this.surveyRepository = surveyRepository;
+    this.guard = guard;
     this.pageRepository = pageRepository;
     this.questionRepository = questionRepository;
     this.responseRepository = responseRepository;
@@ -40,10 +45,12 @@ public class DashboardService {
             LocalDateTime.now();
 
     List<Survey> surveys =
-            surveyRepository.findAll();
+            guard.visibleSurveys();
+
+    List<UUID> visibleIds = surveys.stream().map(Survey::getId).toList();
 
     List<Response> responses =
-            responseRepository.findAll();
+            visibleIds.isEmpty() ? List.of() : responseRepository.findBySurvey_IdIn(visibleIds);
 
     long openSurveys =
             surveys.stream()
@@ -225,7 +232,7 @@ public class DashboardService {
   private double calculateCompletion(
           Response response
   ) {
-    Integer surveyId =
+    UUID surveyId =
             response.getSurvey().getId();
 
     List<Question> requiredQuestions =
@@ -244,7 +251,7 @@ public class DashboardService {
       return 100.0;
     }
 
-    Map<Integer, Answer> answerMap =
+    Map<UUID, Answer> answerMap =
             new HashMap<>();
 
     for (Answer answer :

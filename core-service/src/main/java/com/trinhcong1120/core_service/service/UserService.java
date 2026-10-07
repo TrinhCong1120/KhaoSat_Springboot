@@ -1,21 +1,27 @@
 package com.trinhcong1120.core_service.service;
 
+import java.util.UUID;
+
 import com.trinhcong1120.core_service.dto.event.NotificationEvent;
 import com.trinhcong1120.core_service.dto.user.CreateUserRequest;
 import com.trinhcong1120.core_service.dto.user.UpdateUserRequest;
+import com.trinhcong1120.core_service.dto.user.UserSearchResponse;
 import com.trinhcong1120.core_service.dto.user.UserResponse;
 import com.trinhcong1120.core_service.entity.Role;
 import com.trinhcong1120.core_service.entity.User;
 import com.trinhcong1120.core_service.producer.NotificationProducer;
 import com.trinhcong1120.core_service.repository.RoleRepository;
 import com.trinhcong1120.core_service.repository.UserRepository;
+import com.trinhcong1120.core_service.exception.BadRequestException;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class UserService {
@@ -51,7 +57,7 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public UserResponse getActiveUser(Integer id) {
+    public UserResponse getActiveUser(UUID id) {
 
         User user =
                 userRepository
@@ -65,12 +71,38 @@ public class UserService {
         return toUserResponse(user);
     }
 
+    @Transactional(readOnly = true)
+    public List<UserSearchResponse> searchActiveUsers(String query) {
+        if (query == null || query.isBlank() || query.trim().length() > 255) {
+            throw new BadRequestException("q phai co tu 1 den 255 ky tu");
+        }
+
+        return userRepository.searchActiveByExactUsernameOrEmail(
+                        query.trim().toLowerCase(Locale.ROOT), PageRequest.of(0, 20))
+                .stream()
+                .map(user -> new UserSearchResponse(
+                        user.getId(), user.getUsername(), maskEmail(user.getEmail())))
+                .toList();
+    }
+
+    private String maskEmail(String email) {
+        if (email == null) {
+            return null;
+        }
+        int at = email.indexOf('@');
+        if (at <= 0 || at == email.length() - 1) {
+            return null;
+        }
+        int visible = Math.min(4, at - 1);
+        return email.substring(0, visible) + "****" + email.substring(at);
+    }
+
     // =========================
     // CREATE USER
     // =========================
 
     @Transactional
-    public Integer createUser(CreateUserRequest request) {
+    public UUID createUser(CreateUserRequest request) {
 
         if (request.getUsername() == null
                 || request.getUsername().isBlank()
@@ -161,7 +193,7 @@ public class UserService {
 
     @Transactional
     public void updateUser(
-            Integer id,
+            UUID id,
             UpdateUserRequest request
     ) {
 
@@ -295,7 +327,7 @@ public class UserService {
     // =========================
 
     @Transactional
-    public void deleteUser(Integer id) {
+    public void deleteUser(UUID id) {
 
         User user = userRepository.findById(id)
                 .orElseThrow(

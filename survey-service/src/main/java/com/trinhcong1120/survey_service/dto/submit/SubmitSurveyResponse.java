@@ -5,7 +5,7 @@ import java.util.UUID;
 public class SubmitSurveyResponse {
 
     private String message;
-    private Integer responseId;
+    private UUID responseId;
     private UUID requestId;
 
     public SubmitSurveyResponse() {
@@ -13,7 +13,7 @@ public class SubmitSurveyResponse {
 
     public SubmitSurveyResponse(
             String message,
-            Integer responseId,
+            UUID responseId,
             UUID requestId
     ) {
         this.message = message;
@@ -29,11 +29,11 @@ public class SubmitSurveyResponse {
         this.message = message;
     }
 
-    public Integer getResponseId() {
+    public UUID getResponseId() {
         return responseId;
     }
 
-    public void setResponseId(Integer responseId) {
+    public void setResponseId(UUID responseId) {
         this.responseId = responseId;
     }
 

@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.repository;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.entity.AnswerOption;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -11,22 +13,22 @@ import java.util.List;
 
 @Repository
 public interface AnswerOptionRepository
-        extends JpaRepository<AnswerOption, Integer> {
+        extends JpaRepository<AnswerOption, UUID> {
 
   List<AnswerOption> findByAnswer_Id(
-          Integer answerId
+          UUID answerId
   );
 
   List<AnswerOption> findByOption_Id(
-          Integer optionId
+          UUID optionId
   );
 
   boolean existsByOption_Id(
-          Integer optionId
+          UUID optionId
   );
 
   long countByOption_Id(
-          Integer optionId
+          UUID optionId
   );
 
   @Modifying
@@ -49,5 +51,5 @@ public interface AnswerOptionRepository
                   """,
           nativeQuery = true
   )
-  void deleteBySurveyId(@Param("surveyId") Integer surveyId);
+  void deleteBySurveyId(@Param("surveyId") UUID surveyId);
 }

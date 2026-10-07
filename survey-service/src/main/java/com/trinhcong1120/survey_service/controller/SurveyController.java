@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.controller;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.client.CoreUserClient;
 import com.trinhcong1120.survey_service.dto.core.CoreUserResponse;
 import com.trinhcong1120.survey_service.dto.survey.*;
@@ -30,7 +32,6 @@ public class SurveyController {
   }
 
   @GetMapping
-  @PreAuthorize("hasAuthority('survey_view')")
   public ResponseEntity<List<SurveyResponse>> getAll() {
     return ResponseEntity.ok(
             surveyService.getAll()
@@ -38,9 +39,8 @@ public class SurveyController {
   }
 
   @GetMapping("/{id}")
-  @PreAuthorize("hasAuthority('survey_view')")
   public ResponseEntity<SurveyDetailResponse> getDetail(
-          @PathVariable Integer id
+          @PathVariable UUID id
   ) {
     return ResponseEntity.ok(
             surveyService.getDetail(id)
@@ -77,9 +77,8 @@ public class SurveyController {
   }
 
   @PutMapping("/{id}")
-  @PreAuthorize("hasAuthority('survey_update')")
   public ResponseEntity<SurveyResponse> update(
-          @PathVariable Integer id,
+          @PathVariable UUID id,
           @Valid @RequestBody UpdateSurveyRequest request
   ) {
     return ResponseEntity.ok(
@@ -88,9 +87,8 @@ public class SurveyController {
   }
 
   @PutMapping("/{id}/status")
-  @PreAuthorize("hasAuthority('survey_update')")
   public ResponseEntity<SurveyResponse> updateStatus(
-          @PathVariable Integer id,
+          @PathVariable UUID id,
           @Valid @RequestBody UpdateSurveyStatusRequest request
   ) {
     return ResponseEntity.ok(
@@ -102,9 +100,8 @@ public class SurveyController {
   }
 
   @DeleteMapping("/{id}")
-  @PreAuthorize("hasAuthority('survey_delete')")
   public ResponseEntity<Map<String, String>> delete(
-          @PathVariable Integer id
+          @PathVariable UUID id
   ) {
     surveyService.delete(id);
 

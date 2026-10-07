@@ -1,18 +1,17 @@
 package com.trinhcong1120.survey_service.dto.page;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.dto.media.MediaUploadResponse;
 import java.util.ArrayList;
 import java.util.List;
 
 public class PageResponse {
 
-    private Integer id;
-    private Integer surveyId;
+    private UUID id;
+    private UUID surveyId;
     private String title;
     private String description;
-    private String imageUrl;
-    private String videoUrl;
-    private String audioUrl;
     private Integer orderIndex;
     private List<MediaUploadResponse> mediaFiles = new ArrayList<>();
 
@@ -20,47 +19,41 @@ public class PageResponse {
     }
 
     public PageResponse(
-            Integer id,
-            Integer surveyId,
+            UUID id,
+            UUID surveyId,
             String title,
             Integer orderIndex
     ) {
-        this(id, surveyId, title, null, null, null, null, orderIndex);
+        this(id, surveyId, title, null, orderIndex);
     }
 
     public PageResponse(
-            Integer id,
-            Integer surveyId,
+            UUID id,
+            UUID surveyId,
             String title,
             String description,
-            String imageUrl,
-            String videoUrl,
-            String audioUrl,
             Integer orderIndex
     ) {
         this.id = id;
         this.surveyId = surveyId;
         this.title = title;
         this.description = description;
-        this.imageUrl = imageUrl;
-        this.videoUrl = videoUrl;
-        this.audioUrl = audioUrl;
         this.orderIndex = orderIndex;
     }
 
-    public Integer getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
-    public Integer getSurveyId() {
+    public UUID getSurveyId() {
         return surveyId;
     }
 
-    public void setSurveyId(Integer surveyId) {
+    public void setSurveyId(UUID surveyId) {
         this.surveyId = surveyId;
     }
 
@@ -78,30 +71,6 @@ public class PageResponse {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public String getImageUrl() {
-        return imageUrl;
-    }
-
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
-    }
-
-    public String getVideoUrl() {
-        return videoUrl;
-    }
-
-    public void setVideoUrl(String videoUrl) {
-        this.videoUrl = videoUrl;
-    }
-
-    public String getAudioUrl() {
-        return audioUrl;
-    }
-
-    public void setAudioUrl(String audioUrl) {
-        this.audioUrl = audioUrl;
     }
 
     public Integer getOrderIndex() {

@@ -1,5 +1,7 @@
 package com.trinhcong1120.core_service.entity;
 
+import java.util.UUID;
+
 import jakarta.persistence.*;
 
 @Entity
@@ -7,14 +9,17 @@ import jakarta.persistence.*;
 public class Permission {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @Column(name = "code", nullable = false)
     private String code;
 
     @Column(name = "name", nullable = false)
     private String name;
+
+    @Column(name = "type", nullable = false)
+    private String type;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "function_id", nullable = false)
@@ -29,11 +34,11 @@ public class Permission {
     public Permission() {
     }
 
-    public Integer getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
@@ -52,6 +57,9 @@ public class Permission {
     public void setName(String name) {
         this.name = name;
     }
+
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
 
     public Function getFunction() {
         return function;

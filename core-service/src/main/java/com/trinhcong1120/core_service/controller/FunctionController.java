@@ -1,5 +1,7 @@
 package com.trinhcong1120.core_service.controller;
 
+import java.util.UUID;
+
 import com.trinhcong1120.core_service.dto.function.FunctionDetailResponse;
 import com.trinhcong1120.core_service.dto.function.FunctionResponse;
 import com.trinhcong1120.core_service.dto.function.UpdatePermissionRequest;
@@ -38,7 +40,7 @@ public class FunctionController {
     @GetMapping("/{functionId}")
     public ResponseEntity<List<FunctionDetailResponse>>
     getFunctionDetail(
-            @PathVariable Integer functionId) {
+            @PathVariable UUID functionId) {
 
         return ResponseEntity.ok(
                 functionService

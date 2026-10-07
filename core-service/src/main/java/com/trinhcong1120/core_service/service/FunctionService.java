@@ -1,5 +1,7 @@
 package com.trinhcong1120.core_service.service;
 
+import java.util.UUID;
+
 import com.trinhcong1120.core_service.dto.function.FunctionDetailResponse;
 import com.trinhcong1120.core_service.dto.function.FunctionResponse;
 import com.trinhcong1120.core_service.dto.function.PermissionStatusResponse;
@@ -50,7 +52,7 @@ public class FunctionService {
 
     @Transactional(readOnly = true)
     public List<FunctionDetailResponse> getFunctionDetail(
-            Integer functionId) {
+            UUID functionId) {
 
         com.trinhcong1120.core_service.entity.Function function =
                 functionRepository.findById(functionId)
@@ -72,6 +74,8 @@ public class FunctionService {
                                     .map(permission ->
                                             new PermissionStatusResponse(
                                                     permission.getId(),
+                                                    permission.getCode(),
+                                                    permission.getType(),
                                                     getAction(
                                                             permission.getCode()
                                                     ),
@@ -137,9 +141,7 @@ public class FunctionService {
     }
 
     private String getAction(String code) {
-
-        String[] parts = code.split("_");
-
-        return parts[1];
+        int separator = code.indexOf('_');
+        return separator < 0 ? code : code.substring(separator + 1);
     }
 }

@@ -1,5 +1,7 @@
 package com.trinhcong1120.core_service.entity;
 
+import java.util.UUID;
+
 import jakarta.persistence.*;
 
 import java.util.HashSet;
@@ -10,8 +12,8 @@ import java.util.Set;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @Column(name = "username", nullable = false)
     private String username;
@@ -36,11 +38,11 @@ public class User {
     public User() {
     }
 
-    public Integer getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 

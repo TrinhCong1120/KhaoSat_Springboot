@@ -1,5 +1,7 @@
 package com.trinhcong1120.core_service.entity;
 
+import java.util.UUID;
+
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -11,8 +13,8 @@ import java.util.List;
 public class Menu {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @Column(name = "name", nullable = false)
     private String name;
@@ -46,11 +48,11 @@ public class Menu {
     public Menu() {
     }
 
-    public Integer getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 

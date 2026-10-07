@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.repository;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.entity.Question;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -10,15 +12,15 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface QuestionRepository extends JpaRepository<Question, Integer> {
+public interface QuestionRepository extends JpaRepository<Question, UUID> {
 
-  List<Question> findByPage_IdOrderByOrderIndexAsc(Integer pageId);
+  List<Question> findByPage_IdOrderByOrderIndexAsc(UUID pageId);
 
-  List<Question> findByPage_Survey_Id(Integer surveyId);
+  List<Question> findByPage_Survey_Id(UUID surveyId);
 
-  long countByPage_Survey_Id(Integer surveyId);
+  long countByPage_Survey_Id(UUID surveyId);
 
-  long countByPage_Survey_IdAndIsRequiredTrue(Integer surveyId);
+  long countByPage_Survey_IdAndIsRequiredTrue(UUID surveyId);
 
   @Modifying
   @Query(
@@ -32,5 +34,5 @@ public interface QuestionRepository extends JpaRepository<Question, Integer> {
                   """,
           nativeQuery = true
   )
-  void deleteBySurveyId(@Param("surveyId") Integer surveyId);
+  void deleteBySurveyId(@Param("surveyId") UUID surveyId);
 }

@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.dto.survey;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.dto.media.MediaUploadResponse;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -7,13 +9,11 @@ import java.util.List;
 
 public class SurveyResponse {
 
-    private Integer id;
+    private UUID id;
     private String title;
     private String description;
-    private String imageUrl;
-    private String videoUrl;
-    private String audioUrl;
     private String creatorUser;
+    private UUID creatorUserId;
     private LocalDateTime createdAt;
     private Boolean isActive;
     private List<MediaUploadResponse> mediaFiles = new ArrayList<>();
@@ -22,23 +22,9 @@ public class SurveyResponse {
     }
 
     public SurveyResponse(
-            Integer id,
+            UUID id,
             String title,
             String description,
-            String creatorUser,
-            LocalDateTime createdAt,
-            Boolean isActive
-    ) {
-        this(id, title, description, null, null, null, creatorUser, createdAt, isActive);
-    }
-
-    public SurveyResponse(
-            Integer id,
-            String title,
-            String description,
-            String imageUrl,
-            String videoUrl,
-            String audioUrl,
             String creatorUser,
             LocalDateTime createdAt,
             Boolean isActive
@@ -46,19 +32,16 @@ public class SurveyResponse {
         this.id = id;
         this.title = title;
         this.description = description;
-        this.imageUrl = imageUrl;
-        this.videoUrl = videoUrl;
-        this.audioUrl = audioUrl;
         this.creatorUser = creatorUser;
         this.createdAt = createdAt;
         this.isActive = isActive;
     }
 
-    public Integer getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
@@ -78,33 +61,12 @@ public class SurveyResponse {
         this.description = description;
     }
 
-    public String getImageUrl() {
-        return imageUrl;
-    }
-
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
-    }
-
-    public String getVideoUrl() {
-        return videoUrl;
-    }
-
-    public void setVideoUrl(String videoUrl) {
-        this.videoUrl = videoUrl;
-    }
-
-    public String getAudioUrl() {
-        return audioUrl;
-    }
-
-    public void setAudioUrl(String audioUrl) {
-        this.audioUrl = audioUrl;
-    }
-
     public String getCreatorUser() {
         return creatorUser;
     }
+
+    public UUID getCreatorUserId() { return creatorUserId; }
+    public void setCreatorUserId(UUID creatorUserId) { this.creatorUserId = creatorUserId; }
 
     public void setCreatorUser(String creatorUser) {
         this.creatorUser = creatorUser;

@@ -1,10 +1,12 @@
 package com.trinhcong1120.survey_service.dto.statistics;
 
+import java.util.UUID;
+
 import java.util.List;
 
 public class SurveyStatisticsResponse {
 
-    private Integer surveyId;
+    private UUID surveyId;
     private String surveyTitle;
     private Long totalResponses;
     private List<QuestionStatisticsResponse> questions;
@@ -13,7 +15,7 @@ public class SurveyStatisticsResponse {
     }
 
     public SurveyStatisticsResponse(
-            Integer surveyId,
+            UUID surveyId,
             String surveyTitle,
             Long totalResponses,
             List<QuestionStatisticsResponse> questions
@@ -24,11 +26,11 @@ public class SurveyStatisticsResponse {
         this.questions = questions;
     }
 
-    public Integer getSurveyId() {
+    public UUID getSurveyId() {
         return surveyId;
     }
 
-    public void setSurveyId(Integer surveyId) {
+    public void setSurveyId(UUID surveyId) {
         this.surveyId = surveyId;
     }
 

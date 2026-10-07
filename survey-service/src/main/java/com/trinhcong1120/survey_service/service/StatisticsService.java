@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.service;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.dto.filter.ResponseFilterRequest;
 import com.trinhcong1120.survey_service.dto.statistics.*;
 import com.trinhcong1120.survey_service.entity.*;
@@ -21,6 +23,7 @@ import java.util.stream.Collectors;
 public class StatisticsService {
 
   private final SurveyRepository surveyRepository;
+  private final com.trinhcong1120.survey_service.security.SurveyAccessGuard guard;
   private final QuestionRepository questionRepository;
   private final AnswerRepository answerRepository;
   private final OptionRepository optionRepository;
@@ -29,6 +32,7 @@ public class StatisticsService {
 
   public StatisticsService(
           SurveyRepository surveyRepository,
+          com.trinhcong1120.survey_service.security.SurveyAccessGuard guard,
           QuestionRepository questionRepository,
           AnswerRepository answerRepository,
           OptionRepository optionRepository,
@@ -36,6 +40,7 @@ public class StatisticsService {
           ResponseRepository responseRepository
   ) {
     this.surveyRepository = surveyRepository;
+    this.guard = guard;
     this.questionRepository = questionRepository;
     this.answerRepository = answerRepository;
     this.optionRepository = optionRepository;
@@ -44,15 +49,16 @@ public class StatisticsService {
   }
 
   public SurveyStatisticsResponse getStatistics(
-          Integer surveyId
+          UUID surveyId
   ) {
     return getStatistics(surveyId, null);
   }
 
   public SurveyStatisticsResponse getStatistics(
-          Integer surveyId,
+          UUID surveyId,
           ResponseFilterRequest filter
   ) {
+    guard.view(surveyId);
     Survey survey = surveyRepository.findById(surveyId)
             .orElseThrow(() ->
                     new NotFoundException(
@@ -71,7 +77,7 @@ public class StatisticsService {
                             ))
                     .toList();
 
-    Set<Integer> responseIds =
+    Set<UUID> responseIds =
             responses.stream()
                     .map(Response::getId)
                     .collect(Collectors.toSet());
@@ -102,7 +108,7 @@ public class StatisticsService {
   private QuestionStatisticsResponse buildQuestionStatistics(
           Question question,
           long totalResponses,
-          Set<Integer> responseIds
+          Set<UUID> responseIds
   ) {
     QuestionStatisticsResponse result =
             new QuestionStatisticsResponse();
@@ -162,7 +168,7 @@ public class StatisticsService {
   private ChoiceStatisticsResponse buildChoice(
           Question question,
           long totalResponses,
-          Set<Integer> responseIds
+          Set<UUID> responseIds
   ) {
     List<Option> options =
             optionRepository

@@ -1,21 +1,23 @@
 package com.trinhcong1120.survey_service.dto.condition;
 
+import java.util.UUID;
+
 public class ConditionResponse {
 
-    private Integer id;
-    private Integer sourceQuestionId;
+    private UUID id;
+    private UUID sourceQuestionId;
     private String sourceValue;
-    private Integer targetQuestionId;
+    private UUID targetQuestionId;
     private String action;
 
     public ConditionResponse() {
     }
 
     public ConditionResponse(
-            Integer id,
-            Integer sourceQuestionId,
+            UUID id,
+            UUID sourceQuestionId,
             String sourceValue,
-            Integer targetQuestionId,
+            UUID targetQuestionId,
             String action
     ) {
         this.id = id;
@@ -25,19 +27,19 @@ public class ConditionResponse {
         this.action = action;
     }
 
-    public Integer getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
-    public Integer getSourceQuestionId() {
+    public UUID getSourceQuestionId() {
         return sourceQuestionId;
     }
 
-    public void setSourceQuestionId(Integer sourceQuestionId) {
+    public void setSourceQuestionId(UUID sourceQuestionId) {
         this.sourceQuestionId = sourceQuestionId;
     }
 
@@ -49,11 +51,11 @@ public class ConditionResponse {
         this.sourceValue = sourceValue;
     }
 
-    public Integer getTargetQuestionId() {
+    public UUID getTargetQuestionId() {
         return targetQuestionId;
     }
 
-    public void setTargetQuestionId(Integer targetQuestionId) {
+    public void setTargetQuestionId(UUID targetQuestionId) {
         this.targetQuestionId = targetQuestionId;
     }
 

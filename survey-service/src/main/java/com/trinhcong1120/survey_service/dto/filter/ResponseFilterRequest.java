@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.dto.filter;
 
+import java.util.UUID;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -9,8 +11,8 @@ public class ResponseFilterRequest {
     private LocalDateTime from;
     private LocalDateTime to;
 
-    private Integer questionId;
-    private Integer optionId;
+    private UUID questionId;
+    private UUID optionId;
 
     private String text;
     private BigDecimal number;
@@ -38,19 +40,19 @@ public class ResponseFilterRequest {
         this.to = to;
     }
 
-    public Integer getQuestionId() {
+    public UUID getQuestionId() {
         return questionId;
     }
 
-    public void setQuestionId(Integer questionId) {
+    public void setQuestionId(UUID questionId) {
         this.questionId = questionId;
     }
 
-    public Integer getOptionId() {
+    public UUID getOptionId() {
         return optionId;
     }
 
-    public void setOptionId(Integer optionId) {
+    public void setOptionId(UUID optionId) {
         this.optionId = optionId;
     }
 

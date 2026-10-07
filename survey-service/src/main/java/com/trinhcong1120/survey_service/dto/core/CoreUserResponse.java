@@ -1,10 +1,12 @@
 package com.trinhcong1120.survey_service.dto.core;
 
+import java.util.UUID;
+
 import java.util.List;
 
 public class CoreUserResponse {
 
-  private Integer id;
+  private UUID id;
   private String username;
   private String email;
   private Boolean isActive;
@@ -13,11 +15,11 @@ public class CoreUserResponse {
   public CoreUserResponse() {
   }
 
-  public Integer getId() {
+  public UUID getId() {
     return id;
   }
 
-  public void setId(Integer id) {
+  public void setId(UUID id) {
     this.id = id;
   }
 

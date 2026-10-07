@@ -1,13 +1,15 @@
 package com.trinhcong1120.core_service.dto.function;
 
+import java.util.UUID;
+
 import java.util.List;
 
 public class FunctionDetailResponse {
 
-    private Integer functionID;
+    private UUID functionID;
     private String functionName;
 
-    private Integer roleID;
+    private UUID roleID;
     private String roleName;
 
     private List<PermissionStatusResponse> permissions;
@@ -16,9 +18,9 @@ public class FunctionDetailResponse {
     }
 
     public FunctionDetailResponse(
-            Integer functionID,
+            UUID functionID,
             String functionName,
-            Integer roleID,
+            UUID roleID,
             String roleName,
             List<PermissionStatusResponse> permissions) {
 
@@ -29,7 +31,7 @@ public class FunctionDetailResponse {
         this.permissions = permissions;
     }
 
-    public Integer getFunctionID() {
+    public UUID getFunctionID() {
         return functionID;
     }
 
@@ -37,7 +39,7 @@ public class FunctionDetailResponse {
         return functionName;
     }
 
-    public Integer getRoleID() {
+    public UUID getRoleID() {
         return roleID;
     }
 

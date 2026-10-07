@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.dto.question;
 
+import java.util.UUID;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
@@ -7,13 +9,13 @@ import java.util.List;
 public class CreateQuestionRequest {
 
     @NotNull(message = "ID trang không được để trống")
-    private Integer pageId;
+    private UUID pageId;
 
     @NotBlank(message = "Nội dung câu hỏi không được để trống")
     private String questionText;
 
     @NotNull(message = "Loại câu hỏi không được để trống")
-    private Integer questionTypeId;
+    private UUID questionTypeId;
 
     private Boolean isRequired;
 
@@ -21,19 +23,16 @@ public class CreateQuestionRequest {
     private Integer orderIndex;
 
     private String description;
-    private String imageUrl;
-    private String videoUrl;
-    private String audioUrl;
     private List<OptionRequest> options;
 
     public CreateQuestionRequest() {
     }
 
-    public Integer getPageId() {
+    public UUID getPageId() {
         return pageId;
     }
 
-    public void setPageId(Integer pageId) {
+    public void setPageId(UUID pageId) {
         this.pageId = pageId;
     }
 
@@ -45,11 +44,11 @@ public class CreateQuestionRequest {
         this.questionText = questionText;
     }
 
-    public Integer getQuestionTypeId() {
+    public UUID getQuestionTypeId() {
         return questionTypeId;
     }
 
-    public void setQuestionTypeId(Integer questionTypeId) {
+    public void setQuestionTypeId(UUID questionTypeId) {
         this.questionTypeId = questionTypeId;
     }
 
@@ -75,30 +74,6 @@ public class CreateQuestionRequest {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public String getImageUrl() {
-        return imageUrl;
-    }
-
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
-    }
-
-    public String getVideoUrl() {
-        return videoUrl;
-    }
-
-    public void setVideoUrl(String videoUrl) {
-        this.videoUrl = videoUrl;
-    }
-
-    public String getAudioUrl() {
-        return audioUrl;
-    }
-
-    public void setAudioUrl(String audioUrl) {
-        this.audioUrl = audioUrl;
     }
 
     public List<OptionRequest> getOptions() {

@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.controller;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.dto.filter.ResponseFilterRequest;
 import com.trinhcong1120.survey_service.dto.statistics.SurveyStatisticsResponse;
 import com.trinhcong1120.survey_service.service.ReportService;
@@ -7,7 +9,6 @@ import com.trinhcong1120.survey_service.service.StatisticsService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -31,9 +32,8 @@ public class ReportController {
   }
 
   @GetMapping("/survey/{surveyId}/statistics")
-  @PreAuthorize("hasAuthority('survey_view')")
   public ResponseEntity<SurveyStatisticsResponse> getStatistics(
-          @PathVariable Integer surveyId
+          @PathVariable UUID surveyId
   ) {
     return ResponseEntity.ok(
             statisticsService.getStatistics(
@@ -43,9 +43,8 @@ public class ReportController {
   }
 
   @PostMapping("/survey/{surveyId}/statistics/filter")
-  @PreAuthorize("hasAuthority('survey_view')")
   public ResponseEntity<SurveyStatisticsResponse> getFilteredStatistics(
-          @PathVariable Integer surveyId,
+          @PathVariable UUID surveyId,
           @RequestBody ResponseFilterRequest request
   ) {
     return ResponseEntity.ok(
@@ -60,9 +59,8 @@ public class ReportController {
           "/survey/{surveyId}/responses",
           "/survey/{surveyId}/responses.xlsx"
   })
-  @PreAuthorize("hasAuthority('survey_view')")
   public ResponseEntity<byte[]> exportResponses(
-          @PathVariable Integer surveyId
+          @PathVariable UUID surveyId
   ) {
 
     byte[] data =
@@ -86,9 +84,8 @@ public class ReportController {
           "/survey/{surveyId}/analysis",
           "/survey/{surveyId}/analysis.xlsx"
   })
-  @PreAuthorize("hasAuthority('survey_view')")
   public ResponseEntity<byte[]> exportAnalysis(
-          @PathVariable Integer surveyId
+          @PathVariable UUID surveyId
   ) {
 
     byte[] data =
@@ -109,9 +106,8 @@ public class ReportController {
   }
 
   @PostMapping("/survey/{surveyId}/analysis/filter")
-  @PreAuthorize("hasAuthority('survey_view')")
   public ResponseEntity<byte[]> exportFilteredAnalysis(
-          @PathVariable Integer surveyId,
+          @PathVariable UUID surveyId,
           @RequestBody ResponseFilterRequest request
   ) {
 

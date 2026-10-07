@@ -1,18 +1,20 @@
 package com.trinhcong1120.auth_service.dto;
 
+import java.util.UUID;
+
 import java.util.List;
 
 public class LoginResponse {
 
     private String token;
-    private Integer id;
+    private UUID id;
     private String username;
     private List<String> roles;
     private List<String> permissions;
 
     public LoginResponse(
             String token,
-            Integer id,
+            UUID id,
             String username,
             List<String> roles,
             List<String> permissions) {
@@ -28,7 +30,7 @@ public class LoginResponse {
         return token;
     }
 
-    public Integer getId() {
+    public UUID getId() {
         return id;
     }
 

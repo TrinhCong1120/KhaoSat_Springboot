@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.entity;
 
+import java.util.UUID;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
@@ -11,8 +13,8 @@ import java.util.List;
 public class Page {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Integer id;
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private UUID id;
 
   @JsonIgnore
   @ManyToOne(fetch = FetchType.LAZY)
@@ -25,15 +27,6 @@ public class Page {
   @Column(name = "description", columnDefinition = "TEXT")
   private String description;
 
-  @Column(name = "image_url", columnDefinition = "TEXT")
-  private String imageUrl;
-
-  @Column(name = "video_url", columnDefinition = "TEXT")
-  private String videoUrl;
-
-  @Column(name = "audio_url", columnDefinition = "TEXT")
-  private String audioUrl;
-
   @Column(name = "order_index")
   private Integer orderIndex;
 
@@ -43,8 +36,8 @@ public class Page {
 
   public Page() {}
 
-  public Integer getId() { return id; }
-  public void setId(Integer id) { this.id = id; }
+  public UUID getId() { return id; }
+  public void setId(UUID id) { this.id = id; }
 
   public Survey getSurvey() { return survey; }
   public void setSurvey(Survey survey) { this.survey = survey; }
@@ -54,15 +47,6 @@ public class Page {
 
   public String getDescription() { return description; }
   public void setDescription(String description) { this.description = description; }
-
-  public String getImageUrl() { return imageUrl; }
-  public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
-
-  public String getVideoUrl() { return videoUrl; }
-  public void setVideoUrl(String videoUrl) { this.videoUrl = videoUrl; }
-
-  public String getAudioUrl() { return audioUrl; }
-  public void setAudioUrl(String audioUrl) { this.audioUrl = audioUrl; }
 
   public Integer getOrderIndex() { return orderIndex; }
   public void setOrderIndex(Integer orderIndex) { this.orderIndex = orderIndex; }

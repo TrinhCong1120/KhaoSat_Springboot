@@ -1,5 +1,7 @@
 package com.trinhcong1120.core_service.service;
 
+import java.util.UUID;
+
 import com.trinhcong1120.core_service.dto.menu.CreateMenuRequest;
 import com.trinhcong1120.core_service.dto.menu.MenuResponse;
 import com.trinhcong1120.core_service.dto.menu.MenuTreeResponse;
@@ -62,7 +64,7 @@ public class MenuService {
 
     @Transactional(readOnly = true)
     public List<MenuTreeResponse> getMyMenu(
-            Integer userId) {
+            UUID userId) {
 
         User user = userRepository
                 .findById(userId)
@@ -72,7 +74,7 @@ public class MenuService {
                         )
                 );
 
-        Set<Integer> functionIds =
+        Set<UUID> functionIds =
                 user.getRoles()
                         .stream()
                         .flatMap(
@@ -108,7 +110,7 @@ public class MenuService {
     }
 
     @Transactional(readOnly = true)
-    public Menu getMenuById(Integer id) {
+    public Menu getMenuById(UUID id) {
 
         return menuRepository.findById(id)
                 .orElseThrow(() ->
@@ -119,7 +121,7 @@ public class MenuService {
     }
 
     @Transactional
-    public Integer createMenu(
+    public UUID createMenu(
             CreateMenuRequest request) {
 
         if (request.getName() == null
@@ -171,7 +173,7 @@ public class MenuService {
 
     @Transactional
     public void updateMenu(
-            Integer id,
+            UUID id,
             UpdateMenuRequest request) {
 
         Menu menu = menuRepository
@@ -236,7 +238,7 @@ public class MenuService {
     }
 
     @Transactional
-    public void deleteMenu(Integer id) {
+    public void deleteMenu(UUID id) {
 
         Menu menu = menuRepository
                 .findById(id)
@@ -260,12 +262,12 @@ public class MenuService {
     private MenuResponse toMenuResponse(
             Menu menu) {
 
-        Integer parentId =
+        UUID parentId =
                 menu.getParent() == null
                         ? null
                         : menu.getParent().getId();
 
-        Integer functionId =
+        UUID functionId =
                 menu.getFunction() == null
                         ? null
                         : menu.getFunction().getId();
@@ -320,7 +322,7 @@ public class MenuService {
             Menu menu,
             List<Menu> menus) {
 
-        Integer functionId =
+        UUID functionId =
                 menu.getFunction() == null
                         ? null
                         : menu.getFunction().getId();

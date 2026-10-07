@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.util;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.entity.Answer;
 import com.trinhcong1120.survey_service.entity.AnswerOption;
 import com.trinhcong1120.survey_service.entity.Condition;
@@ -19,7 +21,7 @@ public final class ConditionUtil {
 
   public static boolean isApplicable(
           Question question,
-          Map<Integer, Answer> answerMap,
+          Map<UUID, Answer> answerMap,
           List<Condition> conditions
   ) {
 
@@ -32,13 +34,13 @@ public final class ConditionUtil {
     );
   }
 
-  public static Map<Integer, Boolean> calculateApplicability(
+  public static Map<UUID, Boolean> calculateApplicability(
           List<Question> questions,
           List<Answer> answers,
           List<Condition> conditions
   ) {
 
-    Map<Integer, Answer> answerMap =
+    Map<UUID, Answer> answerMap =
             new HashMap<>();
 
     if (answers != null) {
@@ -59,7 +61,7 @@ public final class ConditionUtil {
       }
     }
 
-    Map<Integer, Boolean> cache =
+    Map<UUID, Boolean> cache =
             new HashMap<>();
 
     if (questions == null) {
@@ -93,10 +95,10 @@ public final class ConditionUtil {
 
   private static boolean isApplicable(
           Question question,
-          Map<Integer, Answer> answerMap,
+          Map<UUID, Answer> answerMap,
           List<Condition> conditions,
-          Map<Integer, Boolean> cache,
-          Set<Integer> visiting
+          Map<UUID, Boolean> cache,
+          Set<UUID> visiting
   ) {
 
     if (question == null
@@ -105,7 +107,7 @@ public final class ConditionUtil {
       return true;
     }
 
-    Integer questionId =
+    UUID questionId =
             question.getId();
 
     if (cache.containsKey(questionId)) {

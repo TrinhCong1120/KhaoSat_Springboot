@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.dto.statistics;
 
+import java.util.UUID;
+
 import java.util.List;
 
 public class ChoiceStatisticsResponse {
@@ -23,7 +25,7 @@ public class ChoiceStatisticsResponse {
 
     public static class OptionStatistic {
 
-        private Integer optionId;
+        private UUID optionId;
         private String optionText;
         private Long count;
         private Double percentage;
@@ -32,7 +34,7 @@ public class ChoiceStatisticsResponse {
         }
 
         public OptionStatistic(
-                Integer optionId,
+                UUID optionId,
                 String optionText,
                 Long count,
                 Double percentage
@@ -43,11 +45,11 @@ public class ChoiceStatisticsResponse {
             this.percentage = percentage;
         }
 
-        public Integer getOptionId() {
+        public UUID getOptionId() {
             return optionId;
         }
 
-        public void setOptionId(Integer optionId) {
+        public void setOptionId(UUID optionId) {
             this.optionId = optionId;
         }
 

@@ -47,15 +47,6 @@ public class SecurityConfig {
                     ).permitAll()
 
                     /*
-                     * Condition API của hệ thống cũ
-                     * hiện tại đang public.
-                     */
-                    .requestMatchers(
-                            "/api/Conditions/**",
-                            "/api/conditions/**"
-                    ).permitAll()
-
-                    /*
                      * Swagger
                      */
                     .requestMatchers(

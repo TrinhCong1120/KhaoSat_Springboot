@@ -1,5 +1,7 @@
 package com.trinhcong1120.core_service.dto.user;
 
+import java.util.UUID;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -18,7 +20,7 @@ public class CreateUserRequest {
     @Size(min = 8, message = "Mật khẩu phải có ít nhất 8 ký tự")
     private String password;
 
-    private List<Integer> roleIds;
+    private List<UUID> roleIds;
 
     public CreateUserRequest() {
     }
@@ -47,11 +49,11 @@ public class CreateUserRequest {
         this.password = password;
     }
 
-    public List<Integer> getRoleIds() {
+    public List<UUID> getRoleIds() {
         return roleIds;
     }
 
-    public void setRoleIds(List<Integer> roleIds) {
+    public void setRoleIds(List<UUID> roleIds) {
         this.roleIds = roleIds;
     }
 }

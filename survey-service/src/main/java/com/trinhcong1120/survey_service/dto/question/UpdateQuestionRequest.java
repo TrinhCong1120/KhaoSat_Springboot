@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.dto.question;
 
+import java.util.UUID;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
@@ -10,7 +12,7 @@ public class UpdateQuestionRequest {
     private String questionText;
 
     @NotNull(message = "Loại câu hỏi không được để trống")
-    private Integer questionTypeId;
+    private UUID questionTypeId;
 
     private Boolean isRequired;
 
@@ -18,9 +20,6 @@ public class UpdateQuestionRequest {
     private Integer orderIndex;
 
     private String description;
-    private String imageUrl;
-    private String videoUrl;
-    private String audioUrl;
     private List<OptionRequest> options;
 
     public UpdateQuestionRequest() {
@@ -34,11 +33,11 @@ public class UpdateQuestionRequest {
         this.questionText = questionText;
     }
 
-    public Integer getQuestionTypeId() {
+    public UUID getQuestionTypeId() {
         return questionTypeId;
     }
 
-    public void setQuestionTypeId(Integer questionTypeId) {
+    public void setQuestionTypeId(UUID questionTypeId) {
         this.questionTypeId = questionTypeId;
     }
 
@@ -64,30 +63,6 @@ public class UpdateQuestionRequest {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public String getImageUrl() {
-        return imageUrl;
-    }
-
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
-    }
-
-    public String getVideoUrl() {
-        return videoUrl;
-    }
-
-    public void setVideoUrl(String videoUrl) {
-        this.videoUrl = videoUrl;
-    }
-
-    public String getAudioUrl() {
-        return audioUrl;
-    }
-
-    public void setAudioUrl(String audioUrl) {
-        this.audioUrl = audioUrl;
     }
 
     public List<OptionRequest> getOptions() {

@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.entity;
 
+import java.util.UUID;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
@@ -8,8 +10,8 @@ import jakarta.persistence.*;
 public class AnswerOption {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Integer id;
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private UUID id;
 
   @JsonIgnore
   @ManyToOne(fetch = FetchType.LAZY)
@@ -23,8 +25,8 @@ public class AnswerOption {
 
   public AnswerOption() {}
 
-  public Integer getId() { return id; }
-  public void setId(Integer id) { this.id = id; }
+  public UUID getId() { return id; }
+  public void setId(UUID id) { this.id = id; }
 
   public Answer getAnswer() { return answer; }
   public void setAnswer(Answer answer) { this.answer = answer; }

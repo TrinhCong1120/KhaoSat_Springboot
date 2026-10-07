@@ -1,7 +1,10 @@
 package com.trinhcong1120.core_service.controller;
 
+import java.util.UUID;
+
 import com.trinhcong1120.core_service.dto.user.CreateUserRequest;
 import com.trinhcong1120.core_service.dto.user.UpdateUserRequest;
+import com.trinhcong1120.core_service.dto.user.UserSearchResponse;
 import com.trinhcong1120.core_service.dto.user.UserResponse;
 import com.trinhcong1120.core_service.service.UserService;
 import jakarta.validation.Valid;
@@ -35,8 +38,8 @@ public class UserController {
     public ResponseEntity<UserResponse> getMe(
             Authentication authentication
     ) {
-        Integer userId =
-                Integer.valueOf(
+        UUID userId =
+                UUID.fromString(
                         authentication.getName()
                 );
 
@@ -45,12 +48,17 @@ public class UserController {
         );
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<List<UserSearchResponse>> searchUsers(@RequestParam String q) {
+        return ResponseEntity.ok(userService.searchActiveUsers(q));
+    }
+
     @PreAuthorize("hasAuthority('user_create')")
     @PostMapping
     public ResponseEntity<Map<String, Object>> createUser(
             @Valid @RequestBody CreateUserRequest request) {
 
-        Integer userId =
+        UUID userId =
                 userService.createUser(request);
 
         return ResponseEntity.ok(
@@ -64,7 +72,7 @@ public class UserController {
     @PreAuthorize("hasAuthority('user_update')")
     @PutMapping("/{id}")
     public ResponseEntity<String> updateUser(
-            @PathVariable Integer id,
+            @PathVariable UUID id,
             @Valid @RequestBody UpdateUserRequest request) {
 
         userService.updateUser(id, request);
@@ -79,7 +87,7 @@ public class UserController {
     @PreAuthorize("hasAuthority('user_delete')")
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteUser(
-            @PathVariable Integer id) {
+            @PathVariable UUID id) {
 
         userService.deleteUser(id);
 

@@ -1,5 +1,7 @@
 package com.trinhcong1120.core_service.service;
 
+import java.util.UUID;
+
 import com.trinhcong1120.core_service.dto.role.CreateRoleRequest;
 import com.trinhcong1120.core_service.dto.role.RoleDetailResponse;
 import com.trinhcong1120.core_service.dto.role.RoleResponse;
@@ -47,7 +49,7 @@ public class RoleService {
 
     @Transactional(readOnly = true)
     public RoleDetailResponse getRoleById(
-            Integer id) {
+            UUID id) {
 
         Role role = roleRepository.findById(id)
                 .orElseThrow(() ->
@@ -64,7 +66,8 @@ public class RoleService {
                                 new RoleDetailResponse.PermissionInfo(
                                         permission.getId(),
                                         permission.getCode(),
-                                        permission.getName()
+                                        permission.getName(),
+                                        permission.getType()
                                 )
                         )
                         .toList();
@@ -96,7 +99,7 @@ public class RoleService {
 
     @Transactional
     public void updateRole(
-            Integer id,
+            UUID id,
             UpdateRoleRequest request) {
 
         Role role = roleRepository.findById(id)
@@ -121,7 +124,7 @@ public class RoleService {
     }
 
     @Transactional
-    public void deleteRole(Integer id) {
+    public void deleteRole(UUID id) {
 
         Role role = roleRepository.findById(id)
                 .orElseThrow(() ->

@@ -1,10 +1,12 @@
 package com.trinhcong1120.core_service.dto.user;
 
+import java.util.UUID;
+
 import java.util.List;
 
 public class UserResponse {
 
-    private Integer id;
+    private UUID id;
     private String username;
     private String email;
     private Boolean isActive;
@@ -14,7 +16,7 @@ public class UserResponse {
     }
 
     public UserResponse(
-            Integer id,
+            UUID id,
             String username,
             String email,
             Boolean isActive,
@@ -27,7 +29,7 @@ public class UserResponse {
         this.roles = roles;
     }
 
-    public Integer getId() {
+    public UUID getId() {
         return id;
     }
 

@@ -13,8 +13,8 @@ import java.util.UUID;
 public class Response {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Integer id;
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private UUID id;
 
   @JsonIgnore
   @ManyToOne(fetch = FetchType.LAZY)
@@ -40,8 +40,8 @@ public class Response {
 
   public Response() {}
 
-  public Integer getId() { return id; }
-  public void setId(Integer id) { this.id = id; }
+  public UUID getId() { return id; }
+  public void setId(UUID id) { this.id = id; }
 
   public Survey getSurvey() { return survey; }
   public void setSurvey(Survey survey) { this.survey = survey; }

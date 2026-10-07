@@ -15,7 +15,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/FailedSurveys")
-@PreAuthorize("hasAuthority('survey_update')")
+@PreAuthorize("hasAuthority('survey_update_all')")
 public class FailedSurveyController {
 
   private final FailedSurveyService failedSurveyService;

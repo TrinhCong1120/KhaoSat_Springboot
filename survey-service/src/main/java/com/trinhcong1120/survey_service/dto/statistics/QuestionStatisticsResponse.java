@@ -1,8 +1,10 @@
 package com.trinhcong1120.survey_service.dto.statistics;
 
+import java.util.UUID;
+
 public class QuestionStatisticsResponse {
 
-    private Integer questionId;
+    private UUID questionId;
     private String questionText;
     private String questionTypeCode;
 
@@ -15,11 +17,11 @@ public class QuestionStatisticsResponse {
     public QuestionStatisticsResponse() {
     }
 
-    public Integer getQuestionId() {
+    public UUID getQuestionId() {
         return questionId;
     }
 
-    public void setQuestionId(Integer questionId) {
+    public void setQuestionId(UUID questionId) {
         this.questionId = questionId;
     }
 

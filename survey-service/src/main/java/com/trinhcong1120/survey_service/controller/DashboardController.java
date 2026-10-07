@@ -3,7 +3,6 @@ package com.trinhcong1120.survey_service.controller;
 import com.trinhcong1120.survey_service.dto.dashboard.DashboardResponse;
 import com.trinhcong1120.survey_service.service.DashboardService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,7 +18,6 @@ public class DashboardController {
   }
 
   @GetMapping
-  @PreAuthorize("hasAuthority('survey_view')")
   public ResponseEntity<DashboardResponse> getDashboard() {
 
     return ResponseEntity.ok(

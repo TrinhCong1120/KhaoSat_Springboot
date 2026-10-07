@@ -14,20 +14,22 @@ import java.util.UUID;
 
 @Repository
 public interface ResponseRepository
-        extends JpaRepository<Response, Integer> {
+        extends JpaRepository<Response, UUID> {
 
   List<Response> findBySurvey_IdOrderBySubmittedAtDesc(
-          Integer surveyId
+          UUID surveyId
   );
+
+  List<Response> findBySurvey_IdIn(List<UUID> surveyIds);
 
   Optional<Response> findByRequestId(UUID requestId);
 
   boolean existsByRequestId(UUID requestId);
 
-  long countBySurvey_Id(Integer surveyId);
+  long countBySurvey_Id(UUID surveyId);
 
   long countBySurvey_IdAndSubmittedAtBetween(
-          Integer surveyId,
+          UUID surveyId,
           LocalDateTime from,
           LocalDateTime to
   );
@@ -42,5 +44,5 @@ public interface ResponseRepository
           value = "DELETE FROM responses WHERE survey_id = :surveyId",
           nativeQuery = true
   )
-  void deleteBySurveyId(@Param("surveyId") Integer surveyId);
+  void deleteBySurveyId(@Param("surveyId") UUID surveyId);
 }

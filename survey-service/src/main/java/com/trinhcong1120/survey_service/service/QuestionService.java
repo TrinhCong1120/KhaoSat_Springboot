@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.service;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.dto.media.MediaUploadResponse;
 import com.trinhcong1120.survey_service.dto.question.*;
 import com.trinhcong1120.survey_service.entity.*;
@@ -17,6 +19,7 @@ import java.util.List;
 public class QuestionService {
 
   private final QuestionRepository questionRepository;
+  private final com.trinhcong1120.survey_service.security.SurveyAccessGuard guard;
   private final PageRepository pageRepository;
   private final QuestionTypeRepository questionTypeRepository;
   private final OptionRepository optionRepository;
@@ -27,6 +30,7 @@ public class QuestionService {
 
   public QuestionService(
           QuestionRepository questionRepository,
+          com.trinhcong1120.survey_service.security.SurveyAccessGuard guard,
           PageRepository pageRepository,
           QuestionTypeRepository questionTypeRepository,
           OptionRepository optionRepository,
@@ -36,6 +40,7 @@ public class QuestionService {
           QuestionValidationRuleService questionValidationRuleService
   ) {
     this.questionRepository = questionRepository;
+    this.guard = guard;
     this.pageRepository = pageRepository;
     this.questionTypeRepository = questionTypeRepository;
     this.optionRepository = optionRepository;
@@ -46,7 +51,8 @@ public class QuestionService {
   }
 
   @Transactional(readOnly = true)
-  public List<QuestionResponse> getByPage(Integer pageId) {
+  public List<QuestionResponse> getByPage(UUID pageId) {
+    guard.viewPage(pageId);
     return questionRepository
             .findByPage_IdOrderByOrderIndexAsc(pageId)
             .stream()
@@ -57,6 +63,7 @@ public class QuestionService {
   public QuestionResponse create(
           CreateQuestionRequest request
   ) {
+    guard.editPage(request.getPageId());
     Page page = pageRepository.findById(request.getPageId())
             .orElseThrow(() ->
                     new NotFoundException("Page không tồn tại"));
@@ -75,9 +82,6 @@ public class QuestionService {
     question.setIsRequired(request.getIsRequired());
     question.setOrderIndex(request.getOrderIndex());
     question.setDescription(request.getDescription());
-    question.setImageUrl(request.getImageUrl());
-    question.setVideoUrl(request.getVideoUrl());
-    question.setAudioUrl(request.getAudioUrl());
 
     question = questionRepository.save(question);
 
@@ -93,9 +97,10 @@ public class QuestionService {
   }
 
   public QuestionResponse update(
-          Integer id,
+          UUID id,
           UpdateQuestionRequest request
   ) {
+    guard.editQuestion(id);
     Question question = questionRepository.findById(id)
             .orElseThrow(() ->
                     new NotFoundException(
@@ -112,9 +117,6 @@ public class QuestionService {
     question.setIsRequired(request.getIsRequired());
     question.setOrderIndex(request.getOrderIndex());
     question.setDescription(request.getDescription());
-    question.setImageUrl(request.getImageUrl());
-    question.setVideoUrl(request.getVideoUrl());
-    question.setAudioUrl(request.getAudioUrl());
 
     questionRepository.save(question);
 
@@ -130,7 +132,8 @@ public class QuestionService {
     return toResponse(question);
   }
 
-  public void delete(Integer id) {
+  public void delete(UUID id) {
+    guard.editQuestion(id);
     Question question = questionRepository.findById(id)
             .orElseThrow(() ->
                     new NotFoundException(
@@ -262,9 +265,6 @@ public class QuestionService {
           OptionRequest request
   ) {
     option.setOptionText(request.getOptionText().trim());
-    option.setImageUrl(request.getImageUrl());
-    option.setVideoUrl(request.getVideoUrl());
-    option.setAudioUrl(request.getAudioUrl());
   }
 
   private void removeUnusedOptions(Question question) {
@@ -311,9 +311,6 @@ public class QuestionService {
             question.getIsRequired(),
             question.getOrderIndex(),
             question.getDescription(),
-            question.getImageUrl(),
-            question.getVideoUrl(),
-            question.getAudioUrl(),
             options
     );
 
@@ -329,9 +326,6 @@ public class QuestionService {
     OptionResponse response = new OptionResponse(
             option.getId(),
             option.getOptionText(),
-            option.getImageUrl(),
-            option.getVideoUrl(),
-            option.getAudioUrl(),
             option.getOrderIndex()
     );
 
@@ -341,29 +335,14 @@ public class QuestionService {
 
   private List<MediaUploadResponse> toMediaResponses(
           String ownerType,
-          Integer ownerId
+          UUID ownerId
   ) {
     return mediaFileRepository
             .findByOwnerTypeAndOwnerIdOrderByUploadedAtDesc(ownerType, ownerId)
             .stream()
-            .map(this::toMediaResponse)
+            .map(MediaUploadResponse::fromEntity)
             .toList();
   }
 
-  private MediaUploadResponse toMediaResponse(MediaFile mediaFile) {
-    MediaUploadResponse response = new MediaUploadResponse();
-    response.setId(mediaFile.getId());
-    response.setOwnerType(mediaFile.getOwnerType());
-    response.setOwnerId(mediaFile.getOwnerId());
-    response.setMediaType(mediaFile.getMediaType());
-    response.setOriginalFilename(mediaFile.getOriginalFilename());
-    response.setContentType(mediaFile.getContentType());
-    response.setSizeBytes(mediaFile.getSizeBytes());
-    response.setBucketName(mediaFile.getBucketName());
-    response.setObjectKey(mediaFile.getObjectKey());
-    response.setObjectUrl(mediaFile.getObjectUrl());
-    response.setCreatedByUserId(mediaFile.getCreatedByUserId());
-    response.setUploadedAt(mediaFile.getUploadedAt());
-    return response;
-  }
+
 }

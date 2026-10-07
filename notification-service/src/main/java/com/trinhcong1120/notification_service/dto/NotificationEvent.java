@@ -1,5 +1,7 @@
 package com.trinhcong1120.notification_service.dto;
 
+import java.util.UUID;
+
 public class NotificationEvent {
 
     private String eventType;
@@ -12,7 +14,7 @@ public class NotificationEvent {
 
     private String message;
 
-    private Integer referenceId;
+    private UUID referenceId;
 
     public NotificationEvent() {
     }
@@ -23,7 +25,7 @@ public class NotificationEvent {
             String username,
             String subject,
             String message,
-            Integer referenceId
+            UUID referenceId
     ) {
         this.eventType = eventType;
         this.email = email;
@@ -73,11 +75,11 @@ public class NotificationEvent {
         this.message = message;
     }
 
-    public Integer getReferenceId() {
+    public UUID getReferenceId() {
         return referenceId;
     }
 
-    public void setReferenceId(Integer referenceId) {
+    public void setReferenceId(UUID referenceId) {
         this.referenceId = referenceId;
     }
 }

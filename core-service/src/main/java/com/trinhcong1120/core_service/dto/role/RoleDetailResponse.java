@@ -1,10 +1,12 @@
 package com.trinhcong1120.core_service.dto.role;
 
+import java.util.UUID;
+
 import java.util.List;
 
 public class RoleDetailResponse {
 
-    private Integer id;
+    private UUID id;
     private String name;
     private List<PermissionInfo> permissions;
 
@@ -12,7 +14,7 @@ public class RoleDetailResponse {
     }
 
     public RoleDetailResponse(
-            Integer id,
+            UUID id,
             String name,
             List<PermissionInfo> permissions) {
 
@@ -21,7 +23,7 @@ public class RoleDetailResponse {
         this.permissions = permissions;
     }
 
-    public Integer getId() {
+    public UUID getId() {
         return id;
     }
 
@@ -35,24 +37,27 @@ public class RoleDetailResponse {
 
     public static class PermissionInfo {
 
-        private Integer id;
+        private UUID id;
         private String code;
         private String name;
+        private String type;
 
         public PermissionInfo() {
         }
 
         public PermissionInfo(
-                Integer id,
+                UUID id,
                 String code,
-                String name) {
+                String name,
+                String type) {
 
             this.id = id;
             this.code = code;
             this.name = name;
+            this.type = type;
         }
 
-        public Integer getId() {
+        public UUID getId() {
             return id;
         }
 
@@ -63,5 +68,6 @@ public class RoleDetailResponse {
         public String getName() {
             return name;
         }
+        public String getType() { return type; }
     }
 }

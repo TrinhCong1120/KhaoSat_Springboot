@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.repository;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.entity.Option;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -10,16 +12,16 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface OptionRepository extends JpaRepository<Option, Integer> {
+public interface OptionRepository extends JpaRepository<Option, UUID> {
 
-  List<Option> findByQuestion_IdOrderByOrderIndexAsc(Integer questionId);
+  List<Option> findByQuestion_IdOrderByOrderIndexAsc(UUID questionId);
 
   boolean existsByIdAndQuestion_Id(
-          Integer optionId,
-          Integer questionId
+          UUID optionId,
+          UUID questionId
   );
 
-  void deleteByQuestion_Id(Integer questionId);
+  void deleteByQuestion_Id(UUID questionId);
 
   @Modifying
   @Query(
@@ -34,5 +36,5 @@ public interface OptionRepository extends JpaRepository<Option, Integer> {
                   """,
           nativeQuery = true
   )
-  void deleteBySurveyId(@Param("surveyId") Integer surveyId);
+  void deleteBySurveyId(@Param("surveyId") UUID surveyId);
 }

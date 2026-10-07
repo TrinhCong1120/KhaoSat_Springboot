@@ -5,8 +5,8 @@ import java.util.UUID;
 
 public class ResponseListResponse {
 
-    private Integer id;
-    private Integer surveyId;
+    private UUID id;
+    private UUID surveyId;
     private UUID requestId;
     private LocalDateTime submittedAt;
     private String preview;
@@ -15,8 +15,8 @@ public class ResponseListResponse {
     }
 
     public ResponseListResponse(
-            Integer id,
-            Integer surveyId,
+            UUID id,
+            UUID surveyId,
             UUID requestId,
             LocalDateTime submittedAt,
             String preview
@@ -28,19 +28,19 @@ public class ResponseListResponse {
         this.preview = preview;
     }
 
-    public Integer getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
-    public Integer getSurveyId() {
+    public UUID getSurveyId() {
         return surveyId;
     }
 
-    public void setSurveyId(Integer surveyId) {
+    public void setSurveyId(UUID surveyId) {
         this.surveyId = surveyId;
     }
 

@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.service;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.dto.condition.ConditionResponse;
 import com.trinhcong1120.survey_service.dto.media.MediaUploadResponse;
 import com.trinhcong1120.survey_service.dto.question.OptionResponse;
@@ -24,6 +26,8 @@ import java.util.List;
 public class SurveyService {
 
   private final SurveyRepository surveyRepository;
+  private final com.trinhcong1120.survey_service.security.SurveyAccessGuard guard;
+  private final SurveyAccessRepository accessRepository;
   private final PageRepository pageRepository;
   private final QuestionRepository questionRepository;
   private final OptionRepository optionRepository;
@@ -36,6 +40,8 @@ public class SurveyService {
 
   public SurveyService(
           SurveyRepository surveyRepository,
+          com.trinhcong1120.survey_service.security.SurveyAccessGuard guard,
+          SurveyAccessRepository accessRepository,
           PageRepository pageRepository,
           QuestionRepository questionRepository,
           OptionRepository optionRepository,
@@ -47,6 +53,8 @@ public class SurveyService {
           QuestionValidationRuleService questionValidationRuleService
   ) {
     this.surveyRepository = surveyRepository;
+    this.guard = guard;
+    this.accessRepository = accessRepository;
     this.pageRepository = pageRepository;
     this.questionRepository = questionRepository;
     this.optionRepository = optionRepository;
@@ -60,31 +68,30 @@ public class SurveyService {
 
   @Transactional(readOnly = true)
   public List<SurveyResponse> getAll() {
-    return surveyRepository.findAllByOrderByCreatedAtDesc()
+    return guard.visibleSurveys()
             .stream()
             .map(this::toResponse)
             .toList();
   }
 
   @Transactional(readOnly = true)
-  public Survey getEntity(Integer id) {
+  public Survey getEntity(UUID id) {
     return surveyRepository.findById(id)
             .orElseThrow(() ->
                     new NotFoundException("Survey khong ton tai"));
   }
 
   @Transactional(readOnly = true)
-  public SurveyDetailResponse getDetail(Integer id) {
+  public SurveyDetailResponse getDetail(UUID id) {
+    guard.view(id);
     Survey survey = getEntity(id);
 
     SurveyDetailResponse response = new SurveyDetailResponse();
     response.setId(survey.getId());
     response.setTitle(survey.getTitle());
     response.setDescription(survey.getDescription());
-    response.setImageUrl(survey.getImageUrl());
-    response.setVideoUrl(survey.getVideoUrl());
-    response.setAudioUrl(survey.getAudioUrl());
     response.setCreatorUser(survey.getCreatorUser());
+    response.setCreatorUserId(survey.getCreatorUserId());
     response.setCreatedAt(survey.getCreatedAt());
     response.setIsActive(survey.getIsActive());
     response.setValidationRevision(survey.getValidationRevision());
@@ -103,10 +110,8 @@ public class SurveyService {
 
     survey.setTitle(request.getTitle());
     survey.setDescription(request.getDescription());
-    survey.setImageUrl(request.getImageUrl());
-    survey.setVideoUrl(request.getVideoUrl());
-    survey.setAudioUrl(request.getAudioUrl());
     survey.setCreatorUser(username);
+    survey.setCreatorUserId(guard.userId());
     survey.setCreatedAt(LocalDateTime.now());
     survey.setIsActive(false);
 
@@ -114,24 +119,23 @@ public class SurveyService {
   }
 
   public SurveyResponse update(
-          Integer id,
+          UUID id,
           UpdateSurveyRequest request
   ) {
+    guard.edit(id);
     Survey survey = getEntity(id);
 
     survey.setTitle(request.getTitle());
     survey.setDescription(request.getDescription());
-    survey.setImageUrl(request.getImageUrl());
-    survey.setVideoUrl(request.getVideoUrl());
-    survey.setAudioUrl(request.getAudioUrl());
 
     return toResponse(surveyRepository.save(survey));
   }
 
   public SurveyResponse updateStatus(
-          Integer id,
+          UUID id,
           UpdateSurveyStatusRequest request
   ) {
+    guard.edit(id);
     Survey survey = getEntity(id);
 
     survey.setIsActive(request.getIsActive());
@@ -139,8 +143,11 @@ public class SurveyService {
     return toResponse(surveyRepository.save(survey));
   }
 
-  public void delete(Integer id) {
+  public void delete(UUID id) {
+    guard.delete(id);
     Survey survey = getEntity(id);
+
+    accessRepository.deleteBySurvey_Id(id);
 
     conditionRepository.deleteBySurveyId(id);
     answerOptionRepository.deleteBySurveyId(id);
@@ -154,7 +161,7 @@ public class SurveyService {
   }
 
   private List<SurveyDetailResponse.PageDetailResponse> toPageDetailResponses(
-          Integer surveyId
+          UUID surveyId
   ) {
     return pageRepository.findBySurvey_IdOrderByOrderIndexAsc(surveyId)
             .stream()
@@ -170,9 +177,6 @@ public class SurveyService {
             page.getId(),
             page.getTitle(),
             page.getDescription(),
-            page.getImageUrl(),
-            page.getVideoUrl(),
-            page.getAudioUrl(),
             page.getOrderIndex(),
             toQuestionResponses(page.getId())
     );
@@ -181,7 +185,7 @@ public class SurveyService {
     return response;
   }
 
-  private List<QuestionResponse> toQuestionResponses(Integer pageId) {
+  private List<QuestionResponse> toQuestionResponses(UUID pageId) {
     return questionRepository.findByPage_IdOrderByOrderIndexAsc(pageId)
             .stream()
             .map(this::toQuestionResponse)
@@ -199,9 +203,6 @@ public class SurveyService {
             question.getIsRequired(),
             question.getOrderIndex(),
             question.getDescription(),
-            question.getImageUrl(),
-            question.getVideoUrl(),
-            question.getAudioUrl(),
             toOptionResponses(question.getId())
     );
 
@@ -213,7 +214,7 @@ public class SurveyService {
     return response;
   }
 
-  private List<OptionResponse> toOptionResponses(Integer questionId) {
+  private List<OptionResponse> toOptionResponses(UUID questionId) {
     return optionRepository.findByQuestion_IdOrderByOrderIndexAsc(questionId)
             .stream()
             .map(this::toOptionResponse)
@@ -224,9 +225,6 @@ public class SurveyService {
     OptionResponse response = new OptionResponse(
             option.getId(),
             option.getOptionText(),
-            option.getImageUrl(),
-            option.getVideoUrl(),
-            option.getAudioUrl(),
             option.getOrderIndex()
     );
 
@@ -234,7 +232,7 @@ public class SurveyService {
     return response;
   }
 
-  private List<ConditionResponse> toConditionResponses(Integer surveyId) {
+  private List<ConditionResponse> toConditionResponses(UUID surveyId) {
     return conditionRepository
             .findBySourceQuestion_Page_Survey_IdOrTargetQuestion_Page_Survey_Id(
                     surveyId,
@@ -260,43 +258,26 @@ public class SurveyService {
             survey.getId(),
             survey.getTitle(),
             survey.getDescription(),
-            survey.getImageUrl(),
-            survey.getVideoUrl(),
-            survey.getAudioUrl(),
             survey.getCreatorUser(),
             survey.getCreatedAt(),
             survey.getIsActive()
     );
 
     response.setMediaFiles(toMediaResponses("SURVEY", survey.getId()));
+    response.setCreatorUserId(survey.getCreatorUserId());
     return response;
   }
 
   private List<MediaUploadResponse> toMediaResponses(
           String ownerType,
-          Integer ownerId
+          UUID ownerId
   ) {
     return mediaFileRepository
             .findByOwnerTypeAndOwnerIdOrderByUploadedAtDesc(ownerType, ownerId)
             .stream()
-            .map(this::toMediaResponse)
+            .map(MediaUploadResponse::fromEntity)
             .toList();
   }
 
-  private MediaUploadResponse toMediaResponse(MediaFile mediaFile) {
-    MediaUploadResponse response = new MediaUploadResponse();
-    response.setId(mediaFile.getId());
-    response.setOwnerType(mediaFile.getOwnerType());
-    response.setOwnerId(mediaFile.getOwnerId());
-    response.setMediaType(mediaFile.getMediaType());
-    response.setOriginalFilename(mediaFile.getOriginalFilename());
-    response.setContentType(mediaFile.getContentType());
-    response.setSizeBytes(mediaFile.getSizeBytes());
-    response.setBucketName(mediaFile.getBucketName());
-    response.setObjectKey(mediaFile.getObjectKey());
-    response.setObjectUrl(mediaFile.getObjectUrl());
-    response.setCreatedByUserId(mediaFile.getCreatedByUserId());
-    response.setUploadedAt(mediaFile.getUploadedAt());
-    return response;
-  }
+
 }

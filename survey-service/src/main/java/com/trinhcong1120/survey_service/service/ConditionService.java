@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.service;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.dto.condition.*;
 import com.trinhcong1120.survey_service.entity.Condition;
 import com.trinhcong1120.survey_service.entity.Option;
@@ -18,17 +20,20 @@ import java.util.*;
 public class ConditionService {
 
   private final ConditionRepository conditionRepository;
+  private final com.trinhcong1120.survey_service.security.SurveyAccessGuard guard;
   private final QuestionRepository questionRepository;
   private final OptionRepository optionRepository;
   private final SurveyRepository surveyRepository;
 
   public ConditionService(
           ConditionRepository conditionRepository,
+          com.trinhcong1120.survey_service.security.SurveyAccessGuard guard,
           QuestionRepository questionRepository,
           OptionRepository optionRepository,
           SurveyRepository surveyRepository
   ) {
     this.conditionRepository = conditionRepository;
+    this.guard = guard;
     this.questionRepository = questionRepository;
     this.optionRepository = optionRepository;
     this.surveyRepository = surveyRepository;
@@ -36,7 +41,9 @@ public class ConditionService {
 
   @Transactional(readOnly = true)
   public List<ConditionResponse> getAll() {
-    return conditionRepository.findAll()
+    List<UUID> surveyIds = guard.visibleSurveys().stream().map(Survey::getId).toList();
+    if (surveyIds.isEmpty()) return List.of();
+    return conditionRepository.findBySurveyIds(surveyIds)
             .stream()
             .map(this::toResponse)
             .toList();
@@ -44,13 +51,11 @@ public class ConditionService {
 
   @Transactional(readOnly = true)
   public List<ConditionResponse> getBySurvey(
-          Integer surveyId
+          UUID surveyId
   ) {
+    guard.view(surveyId);
     return conditionRepository
-            .findBySourceQuestion_Page_Survey_IdOrTargetQuestion_Page_Survey_Id(
-                    surveyId,
-                    surveyId
-            )
+            .findSafeBySurveyId(surveyId)
             .stream()
             .map(this::toResponse)
             .toList();
@@ -59,6 +64,7 @@ public class ConditionService {
   public ConditionResponse create(
           CreateConditionRequest request
   ) {
+    guard.editConditionQuestions(request.getSourceQuestionId(), request.getTargetQuestionId());
     Question source = getQuestion(
             request.getSourceQuestionId());
 
@@ -87,14 +93,21 @@ public class ConditionService {
   }
 
   public ConditionResponse update(
-          Integer id,
+          UUID id,
           UpdateConditionRequest request
   ) {
+    guard.editCondition(id);
+    guard.editConditionQuestions(request.getSourceQuestionId(), request.getTargetQuestionId());
     Condition condition =
             conditionRepository.findById(id)
                     .orElseThrow(() ->
                             new NotFoundException(
                                     "Condition không tồn tại"));
+
+    UUID originalSurveyId = condition.getSourceQuestion().getPage().getSurvey().getId();
+    if (!originalSurveyId.equals(guard.questionSurvey(request.getSourceQuestionId()))) {
+      throw new BadRequestException("Khong duoc chuyen condition sang survey khac");
+    }
 
     Question source =
             getQuestion(request.getSourceQuestionId());
@@ -121,7 +134,8 @@ public class ConditionService {
     return toResponse(saved);
   }
 
-  public void delete(Integer id) {
+  public void delete(UUID id) {
+    guard.editCondition(id);
 
     Condition condition =
             conditionRepository.findById(id)
@@ -145,7 +159,7 @@ public class ConditionService {
     surveyRepository.save(survey);
   }
 
-  private Question getQuestion(Integer id) {
+  private Question getQuestion(UUID id) {
     return questionRepository.findById(id)
             .orElseThrow(() ->
                     new NotFoundException(
@@ -210,19 +224,14 @@ public class ConditionService {
     if ("SINGLE_CHOICE".equalsIgnoreCase(code)
             || "MULTIPLE_CHOICE".equalsIgnoreCase(code)) {
 
-      LinkedHashSet<Integer> ids =
+      LinkedHashSet<UUID> ids =
               new LinkedHashSet<>();
 
       for (String item : value.split(",")) {
 
         try {
 
-          int optionId =
-                  Integer.parseInt(item.trim());
-
-          if (optionId <= 0) {
-            throw new NumberFormatException();
-          }
+          UUID optionId = UUID.fromString(item.trim());
 
           Option option =
                   optionRepository
@@ -241,7 +250,7 @@ public class ConditionService {
 
           ids.add(optionId);
 
-        } catch (NumberFormatException e) {
+        } catch (IllegalArgumentException e) {
 
           throw new BadRequestException(
                   "Source value phải chứa option ID hợp lệ");

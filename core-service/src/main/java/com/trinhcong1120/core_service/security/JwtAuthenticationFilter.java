@@ -1,5 +1,7 @@
 package com.trinhcong1120.core_service.security;
 
+import java.util.UUID;
+
 import com.trinhcong1120.core_service.entity.User;
 import com.trinhcong1120.core_service.repository.UserRepository;
 import io.jsonwebtoken.Claims;
@@ -78,8 +80,8 @@ public class JwtAuthenticationFilter
                 return;
             }
 
-            Integer userId =
-                    Integer.valueOf(
+            UUID userId =
+                    UUID.fromString(
                             idClaim.toString()
                     );
 

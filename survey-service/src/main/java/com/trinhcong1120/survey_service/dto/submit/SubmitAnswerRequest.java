@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.dto.submit;
 
+import java.util.UUID;
+
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -9,7 +11,7 @@ import java.util.List;
 public class SubmitAnswerRequest {
 
     @NotNull(message = "ID cau hoi khong duoc de trong")
-    private Integer questionId;
+    private UUID questionId;
 
     private String answerText;
     private BigDecimal answerNumber;
@@ -22,16 +24,16 @@ public class SubmitAnswerRequest {
     private String ward;
     private String addressDetail;
 
-    private List<Integer> optionIds = new ArrayList<>();
+    private List<UUID> optionIds = new ArrayList<>();
 
     public SubmitAnswerRequest() {
     }
 
-    public Integer getQuestionId() {
+    public UUID getQuestionId() {
         return questionId;
     }
 
-    public void setQuestionId(Integer questionId) {
+    public void setQuestionId(UUID questionId) {
         this.questionId = questionId;
     }
 
@@ -99,11 +101,11 @@ public class SubmitAnswerRequest {
         this.addressDetail = addressDetail;
     }
 
-    public List<Integer> getOptionIds() {
+    public List<UUID> getOptionIds() {
         return optionIds;
     }
 
-    public void setOptionIds(List<Integer> optionIds) {
+    public void setOptionIds(List<UUID> optionIds) {
         this.optionIds = optionIds;
     }
 }

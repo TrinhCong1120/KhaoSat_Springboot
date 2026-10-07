@@ -1,13 +1,15 @@
 package com.trinhcong1120.auth_service.dto;
 
+import java.util.UUID;
+
 public class RegisterResponse {
 
-    private Integer id;
+    private UUID id;
     private String username;
     private Boolean isActive;
 
     public RegisterResponse(
-            Integer id,
+            UUID id,
             String username,
             Boolean isActive) {
 
@@ -16,7 +18,7 @@ public class RegisterResponse {
         this.isActive = isActive;
     }
 
-    public Integer getId() {
+    public UUID getId() {
         return id;
     }
 

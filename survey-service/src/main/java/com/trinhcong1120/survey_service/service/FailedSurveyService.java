@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.service;
 
+import java.util.UUID;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -255,8 +257,8 @@ public class FailedSurveyService {
           continue;
         }
 
-        Integer surveyId =
-                getIntegerIgnoreCase(
+        UUID surveyId =
+                getUuidIgnoreCase(
                         record,
                         "surveyId"
                 );
@@ -264,7 +266,7 @@ public class FailedSurveyService {
         if (surveyId == null) {
 
           surveyId =
-                  getIntegerIgnoreCase(
+                  getUuidIgnoreCase(
                           data,
                           "surveyId"
                   );
@@ -363,7 +365,7 @@ public class FailedSurveyService {
         continue;
       }
 
-      for (Integer optionId :
+      for (UUID optionId :
               item.getOptionIds()) {
 
         if (optionId == null) {
@@ -481,7 +483,7 @@ public class FailedSurveyService {
         continue;
       }
 
-      for (Integer optionId :
+      for (UUID optionId :
               item.getOptionIds()) {
 
         Option option =
@@ -649,7 +651,7 @@ public class FailedSurveyService {
     return null;
   }
 
-  private Integer getIntegerIgnoreCase(
+  private UUID getUuidIgnoreCase(
           JsonNode node,
           String name
   ) {
@@ -663,7 +665,7 @@ public class FailedSurveyService {
     }
 
     try {
-      return value.asInt();
+      return UUID.fromString(value.asText());
     } catch (Exception e) {
       return null;
     }

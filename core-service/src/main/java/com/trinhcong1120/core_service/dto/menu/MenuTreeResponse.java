@@ -1,16 +1,18 @@
 package com.trinhcong1120.core_service.dto.menu;
 
+import java.util.UUID;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class MenuTreeResponse {
 
-    private Integer id;
+    private UUID id;
     private String name;
     private String path;
     private String icon;
     private Integer orderIndex;
-    private Integer functionId;
+    private UUID functionId;
 
     private List<MenuTreeResponse> children = new ArrayList<>();
 
@@ -18,12 +20,12 @@ public class MenuTreeResponse {
     }
 
     public MenuTreeResponse(
-            Integer id,
+            UUID id,
             String name,
             String path,
             String icon,
             Integer orderIndex,
-            Integer functionId) {
+            UUID functionId) {
 
         this.id = id;
         this.name = name;
@@ -33,7 +35,7 @@ public class MenuTreeResponse {
         this.functionId = functionId;
     }
 
-    public Integer getId() {
+    public UUID getId() {
         return id;
     }
 
@@ -53,7 +55,7 @@ public class MenuTreeResponse {
         return orderIndex;
     }
 
-    public Integer getFunctionId() {
+    public UUID getFunctionId() {
         return functionId;
     }
 

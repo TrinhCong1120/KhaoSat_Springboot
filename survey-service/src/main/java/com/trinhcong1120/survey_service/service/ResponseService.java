@@ -1,6 +1,9 @@
 package com.trinhcong1120.survey_service.service;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.dto.filter.ResponseFilterRequest;
+import com.trinhcong1120.survey_service.dto.media.MediaUploadResponse;
 import com.trinhcong1120.survey_service.dto.response.ResponseDetailResponse;
 import com.trinhcong1120.survey_service.dto.response.ResponseListResponse;
 import com.trinhcong1120.survey_service.dto.response.ResponsePageResponse;
@@ -25,31 +28,38 @@ import java.util.stream.Collectors;
 public class ResponseService {
 
   private final ResponseRepository responseRepository;
+  private final com.trinhcong1120.survey_service.security.SurveyAccessGuard guard;
   private final AnswerRepository answerRepository;
   private final AnswerOptionRepository answerOptionRepository;
   private final PageRepository pageRepository;
   private final QuestionRepository questionRepository;
   private final ConditionRepository conditionRepository;
+  private final MediaFileRepository mediaFileRepository;
 
   public ResponseService(
           ResponseRepository responseRepository,
+          com.trinhcong1120.survey_service.security.SurveyAccessGuard guard,
           AnswerRepository answerRepository,
           AnswerOptionRepository answerOptionRepository,
           PageRepository pageRepository,
           QuestionRepository questionRepository,
-          ConditionRepository conditionRepository
+          ConditionRepository conditionRepository,
+          MediaFileRepository mediaFileRepository
   ) {
     this.responseRepository = responseRepository;
+    this.guard = guard;
     this.answerRepository = answerRepository;
     this.answerOptionRepository = answerOptionRepository;
     this.pageRepository = pageRepository;
     this.questionRepository = questionRepository;
     this.conditionRepository = conditionRepository;
+    this.mediaFileRepository = mediaFileRepository;
   }
 
   public List<ResponseListResponse> getBySurvey(
-          Integer surveyId
+          UUID surveyId
   ) {
+    guard.view(surveyId);
     return responseRepository
             .findBySurvey_IdOrderBySubmittedAtDesc(
                     surveyId
@@ -60,9 +70,10 @@ public class ResponseService {
   }
 
   public List<ResponseListResponse> filter(
-          Integer surveyId,
+          UUID surveyId,
           ResponseFilterRequest request
   ) {
+    guard.view(surveyId);
     return responseRepository
             .findBySurvey_IdOrderBySubmittedAtDesc(
                     surveyId
@@ -79,8 +90,9 @@ public class ResponseService {
   }
 
   public ResponseDetailResponse getDetail(
-          Integer responseId
+          UUID responseId
   ) {
+    guard.viewResponse(responseId);
     Response response =
             responseRepository
                     .findById(responseId)
@@ -88,7 +100,7 @@ public class ResponseService {
                             new NotFoundException(
                                     "Response not found"));
 
-    Integer surveyId =
+    UUID surveyId =
             response.getSurvey().getId();
 
     List<Page> pages =
@@ -119,7 +131,7 @@ public class ResponseService {
                             surveyId
                     );
 
-    Map<Integer, Answer> answerMap =
+    Map<UUID, Answer> answerMap =
             answers.stream()
                     .filter(answer ->
                             answer.getQuestion() != null)
@@ -131,7 +143,7 @@ public class ResponseService {
                             (first, second) -> first
                     ));
 
-    Map<Integer, Boolean> applicability =
+    Map<UUID, Boolean> applicability =
             ConditionUtil.calculateApplicability(
                     questions,
                     answers,
@@ -149,21 +161,20 @@ public class ResponseService {
                     )
                     .toList();
 
-    return new ResponseDetailResponse(
+    ResponseDetailResponse detail = new ResponseDetailResponse(
             response.getId(),
             surveyId,
             response.getSurvey().getTitle(),
             response.getSurvey().getDescription(),
-            response.getSurvey().getImageUrl(),
-            response.getSurvey().getVideoUrl(),
-            response.getSurvey().getAudioUrl(),
             response.getRequestId(),
             response.getSubmittedAt(),
             pageResponses
     );
+    detail.setMediaFiles(toMediaResponses("SURVEY", surveyId));
+    return detail;
   }
 
-  public Response getEntity(Integer responseId) {
+  public Response getEntity(UUID responseId) {
     return responseRepository
             .findById(responseId)
             .orElseThrow(() ->
@@ -171,10 +182,18 @@ public class ResponseService {
                             "Response khong ton tai"));
   }
 
+  private List<MediaUploadResponse> toMediaResponses(String ownerType, UUID ownerId) {
+    return mediaFileRepository
+            .findByOwnerTypeAndOwnerIdOrderByUploadedAtDesc(ownerType, ownerId)
+            .stream()
+            .map(MediaUploadResponse::fromEntity)
+            .toList();
+  }
+
   private ResponsePageResponse toPageResponse(
           Page page,
-          Map<Integer, Answer> answerMap,
-          Map<Integer, Boolean> applicability
+          Map<UUID, Answer> answerMap,
+          Map<UUID, Boolean> applicability
   ) {
     List<Question> questions =
             questionRepository
@@ -182,13 +201,10 @@ public class ResponseService {
                             page.getId()
                     );
 
-    return new ResponsePageResponse(
+    ResponsePageResponse result = new ResponsePageResponse(
             page.getId(),
             page.getTitle(),
             page.getDescription(),
-            page.getImageUrl(),
-            page.getVideoUrl(),
-            page.getAudioUrl(),
             page.getOrderIndex(),
             questions.stream()
                     .map(question ->
@@ -203,6 +219,8 @@ public class ResponseService {
                     )
                     .toList()
     );
+    result.setMediaFiles(toMediaResponses("PAGE", page.getId()));
+    return result;
   }
 
   private ResponseQuestionResponse toQuestionResponse(
@@ -216,9 +234,7 @@ public class ResponseService {
     result.setQuestionId(question.getId());
     result.setQuestionText(question.getQuestionText());
     result.setDescription(question.getDescription());
-    result.setImageUrl(question.getImageUrl());
-    result.setVideoUrl(question.getVideoUrl());
-    result.setAudioUrl(question.getAudioUrl());
+    result.setMediaFiles(toMediaResponses("QUESTION", question.getId()));
     result.setQuestionTypeId(
             question.getQuestionType() == null
                     ? null

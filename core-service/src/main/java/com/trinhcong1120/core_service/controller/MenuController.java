@@ -1,5 +1,7 @@
 package com.trinhcong1120.core_service.controller;
 
+import java.util.UUID;
+
 import com.trinhcong1120.core_service.dto.menu.CreateMenuRequest;
 import com.trinhcong1120.core_service.dto.menu.MenuResponse;
 import com.trinhcong1120.core_service.dto.menu.MenuTreeResponse;
@@ -51,8 +53,8 @@ public class MenuController {
     public ResponseEntity<List<MenuTreeResponse>>
     getMyMenu(Authentication authentication) {
 
-        Integer userId =
-                Integer.valueOf(
+        UUID userId =
+                UUID.fromString(
                         authentication.getName()
                 );
 
@@ -62,7 +64,7 @@ public class MenuController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<MenuResponse> getMenuById(@PathVariable Integer id) {
+    public ResponseEntity<MenuResponse> getMenuById(@PathVariable UUID id) {
 
         Menu menu = menuService.getMenuById(id);
 
@@ -94,7 +96,7 @@ public class MenuController {
     createMenu(
             @Valid @RequestBody CreateMenuRequest request) {
 
-        Integer menuId =
+        UUID menuId =
                 menuService.createMenu(request);
 
         return ResponseEntity.ok(
@@ -111,7 +113,7 @@ public class MenuController {
     @PutMapping("/{id}")
     public ResponseEntity<Map<String, Object>>
     updateMenu(
-            @PathVariable Integer id,
+            @PathVariable UUID id,
             @Valid @RequestBody UpdateMenuRequest request) {
 
         menuService.updateMenu(
@@ -133,7 +135,7 @@ public class MenuController {
     @DeleteMapping("/{id}")
     public ResponseEntity<String>
     deleteMenu(
-            @PathVariable Integer id) {
+            @PathVariable UUID id) {
 
         menuService.deleteMenu(id);
 

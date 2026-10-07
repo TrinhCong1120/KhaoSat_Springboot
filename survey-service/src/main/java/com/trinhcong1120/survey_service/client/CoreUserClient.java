@@ -2,6 +2,7 @@ package com.trinhcong1120.survey_service.client;
 
 import com.trinhcong1120.survey_service.dto.core.CoreUserResponse;
 import com.trinhcong1120.survey_service.exception.BadRequestException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -10,10 +11,10 @@ public class CoreUserClient {
 
   private final RestClient restClient;
 
-  public CoreUserClient(RestClient.Builder restClientBuilder) {
+  public CoreUserClient(@Value("${app.core-service-url:http://core-service:8081}") String coreServiceUrl) {
     this.restClient =
-            restClientBuilder
-                    .baseUrl("http://core-service")
+            RestClient.builder()
+                    .baseUrl(coreServiceUrl)
                     .build();
   }
 

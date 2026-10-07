@@ -1,10 +1,11 @@
 package com.trinhcong1120.survey_service.controller;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.dto.question.*;
 import com.trinhcong1120.survey_service.service.QuestionService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,9 +24,8 @@ public class QuestionController {
   }
 
   @GetMapping("/page/{pageId}")
-  @PreAuthorize("hasAuthority('survey_view')")
   public ResponseEntity<List<QuestionResponse>> getByPage(
-          @PathVariable Integer pageId
+          @PathVariable UUID pageId
   ) {
     return ResponseEntity.ok(
             questionService.getByPage(pageId)
@@ -33,7 +33,6 @@ public class QuestionController {
   }
 
   @PostMapping
-  @PreAuthorize("hasAuthority('survey_update')")
   public ResponseEntity<QuestionResponse> create(
           @Valid @RequestBody CreateQuestionRequest request
   ) {
@@ -43,9 +42,8 @@ public class QuestionController {
   }
 
   @PutMapping("/{id}")
-  @PreAuthorize("hasAuthority('survey_update')")
   public ResponseEntity<QuestionResponse> update(
-          @PathVariable Integer id,
+          @PathVariable UUID id,
           @Valid @RequestBody UpdateQuestionRequest request
   ) {
     return ResponseEntity.ok(
@@ -57,9 +55,8 @@ public class QuestionController {
   }
 
   @DeleteMapping("/{id}")
-  @PreAuthorize("hasAuthority('survey_update')")
   public ResponseEntity<Map<String, String>> delete(
-          @PathVariable Integer id
+          @PathVariable UUID id
   ) {
     questionService.delete(id);
 

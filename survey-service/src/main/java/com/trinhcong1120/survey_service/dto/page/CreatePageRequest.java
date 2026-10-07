@@ -1,20 +1,19 @@
 package com.trinhcong1120.survey_service.dto.page;
 
+import java.util.UUID;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public class CreatePageRequest {
 
     @NotNull(message = "ID khảo sát không được để trống")
-    private Integer surveyId;
+    private UUID surveyId;
 
     @NotBlank(message = "Tiêu đề trang không được để trống")
     private String title;
 
     private String description;
-    private String imageUrl;
-    private String videoUrl;
-    private String audioUrl;
 
     @NotNull(message = "Thứ tự trang không được để trống")
     private Integer orderIndex;
@@ -22,11 +21,11 @@ public class CreatePageRequest {
     public CreatePageRequest() {
     }
 
-    public Integer getSurveyId() {
+    public UUID getSurveyId() {
         return surveyId;
     }
 
-    public void setSurveyId(Integer surveyId) {
+    public void setSurveyId(UUID surveyId) {
         this.surveyId = surveyId;
     }
 
@@ -44,30 +43,6 @@ public class CreatePageRequest {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public String getImageUrl() {
-        return imageUrl;
-    }
-
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
-    }
-
-    public String getVideoUrl() {
-        return videoUrl;
-    }
-
-    public void setVideoUrl(String videoUrl) {
-        this.videoUrl = videoUrl;
-    }
-
-    public String getAudioUrl() {
-        return audioUrl;
-    }
-
-    public void setAudioUrl(String audioUrl) {
-        this.audioUrl = audioUrl;
     }
 
     public Integer getOrderIndex() {

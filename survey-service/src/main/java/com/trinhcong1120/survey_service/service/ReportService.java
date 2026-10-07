@@ -1,5 +1,7 @@
 package com.trinhcong1120.survey_service.service;
 
+import java.util.UUID;
+
 import com.trinhcong1120.survey_service.entity.*;
 import com.trinhcong1120.survey_service.entity.Response;
 import com.trinhcong1120.survey_service.dto.filter.ResponseFilterRequest;
@@ -19,6 +21,7 @@ import java.util.*;
 public class ReportService {
 
   private final SurveyRepository surveyRepository;
+  private final com.trinhcong1120.survey_service.security.SurveyAccessGuard guard;
   private final PageRepository pageRepository;
   private final QuestionRepository questionRepository;
   private final ResponseRepository responseRepository;
@@ -28,6 +31,7 @@ public class ReportService {
 
   public ReportService(
           SurveyRepository surveyRepository,
+          com.trinhcong1120.survey_service.security.SurveyAccessGuard guard,
           PageRepository pageRepository,
           QuestionRepository questionRepository,
           ResponseRepository responseRepository,
@@ -36,6 +40,7 @@ public class ReportService {
           StatisticsService statisticsService
   ) {
     this.surveyRepository = surveyRepository;
+    this.guard = guard;
     this.pageRepository = pageRepository;
     this.questionRepository = questionRepository;
     this.responseRepository = responseRepository;
@@ -44,7 +49,8 @@ public class ReportService {
     this.statisticsService = statisticsService;
   }
 
-  public byte[] exportResponses(Integer surveyId) {
+  public byte[] exportResponses(UUID surveyId) {
+    guard.view(surveyId);
 
     Survey survey = surveyRepository.findById(surveyId)
             .orElseThrow(() ->
@@ -124,7 +130,7 @@ public class ReportService {
                                 response.getId()
                         );
 
-        Map<Integer, Answer> answerMap =
+        Map<UUID, Answer> answerMap =
                 new HashMap<>();
 
         for (Answer answer : answers) {
@@ -167,14 +173,15 @@ public class ReportService {
     }
   }
 
-  public byte[] exportAnalysis(Integer surveyId) {
+  public byte[] exportAnalysis(UUID surveyId) {
     return exportAnalysis(surveyId, null);
   }
 
   public byte[] exportAnalysis(
-          Integer surveyId,
+          UUID surveyId,
           ResponseFilterRequest filter
   ) {
+    guard.view(surveyId);
 
     Survey survey = surveyRepository.findById(surveyId)
             .orElseThrow(() ->
@@ -226,7 +233,7 @@ public class ReportService {
 
     Row row0 = sheet.createRow(0);
     row0.createCell(0).setCellValue("Survey ID");
-    row0.createCell(1).setCellValue(survey.getId());
+    row0.createCell(1).setCellValue(survey.getId().toString());
 
     Row row1 = sheet.createRow(1);
     row1.createCell(0).setCellValue("Tên khảo sát");
