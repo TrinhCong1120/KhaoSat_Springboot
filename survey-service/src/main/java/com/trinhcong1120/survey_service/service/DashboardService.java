@@ -22,6 +22,7 @@ public class DashboardService {
   private final QuestionRepository questionRepository;
   private final ResponseRepository responseRepository;
   private final AnswerRepository answerRepository;
+  private final SurveyScheduleService schedule;
 
   public DashboardService(
           SurveyRepository surveyRepository,
@@ -29,7 +30,8 @@ public class DashboardService {
           PageRepository pageRepository,
           QuestionRepository questionRepository,
           ResponseRepository responseRepository,
-          AnswerRepository answerRepository
+          AnswerRepository answerRepository,
+          SurveyScheduleService schedule
   ) {
     this.surveyRepository = surveyRepository;
     this.guard = guard;
@@ -37,6 +39,7 @@ public class DashboardService {
     this.questionRepository = questionRepository;
     this.responseRepository = responseRepository;
     this.answerRepository = answerRepository;
+    this.schedule = schedule;
   }
 
   public DashboardResponse getDashboard() {
@@ -158,12 +161,7 @@ public class DashboardService {
 
   private boolean isOpen(Survey survey) {
 
-    return Boolean.TRUE.equals(
-            survey.getIsActive()
-    ) && pageRepository
-            .countBySurvey_Id(
-                    survey.getId()
-            ) > 0;
+    return schedule.status(survey) == SurveyScheduleService.Status.OPEN;
   }
 
   private Double calculateOpenSurveyDelta(
@@ -383,26 +381,15 @@ public class DashboardService {
     long open = 0;
     long closed = 0;
     long draft = 0;
+    long scheduled = 0;
 
     for (Survey survey : surveys) {
 
-      long pages =
-              pageRepository.countBySurvey_Id(
-                      survey.getId()
-              );
-
-      if (!Boolean.TRUE.equals(
-              survey.getIsActive())) {
-
-        closed++;
-
-      } else if (pages == 0) {
-
-        draft++;
-
-      } else {
-
-        open++;
+      switch (schedule.status(survey)) {
+        case OPEN -> open++;
+        case CLOSED -> closed++;
+        case DRAFT -> draft++;
+        case SCHEDULED -> scheduled++;
       }
     }
 
@@ -421,7 +408,7 @@ public class DashboardService {
             ),
             new SurveyStatusResponse(
                     "Lên lịch",
-                    0L
+                    scheduled
             )
     );
   }

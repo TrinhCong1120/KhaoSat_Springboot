@@ -5,6 +5,7 @@ import java.util.UUID;
 import com.trinhcong1120.survey_service.dto.media.MediaUploadResponse;
 import java.util.ArrayList;
 import java.util.List;
+import java.time.LocalDateTime;
 
 public class PageResponse {
 
@@ -13,6 +14,8 @@ public class PageResponse {
     private String title;
     private String description;
     private Integer orderIndex;
+    private LocalDateTime openAt;
+    private LocalDateTime closeAt;
     private List<MediaUploadResponse> mediaFiles = new ArrayList<>();
 
     public PageResponse() {
@@ -80,6 +83,10 @@ public class PageResponse {
     public void setOrderIndex(Integer orderIndex) {
         this.orderIndex = orderIndex;
     }
+    public LocalDateTime getOpenAt() { return openAt; }
+    public void setOpenAt(LocalDateTime openAt) { this.openAt = openAt; }
+    public LocalDateTime getCloseAt() { return closeAt; }
+    public void setCloseAt(LocalDateTime closeAt) { this.closeAt = closeAt; }
 
     public List<MediaUploadResponse> getMediaFiles() {
         return mediaFiles;

@@ -1,5 +1,6 @@
 package com.trinhcong1120.core_service.dto.user;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.UUID;
 
 import jakarta.validation.constraints.Email;
@@ -17,6 +18,8 @@ public class UpdateUserRequest {
     private String password;
 
     private List<UUID> roleIds;
+    private Long telegramChatId;
+    private boolean telegramChatIdPresent;
 
     public UpdateUserRequest() {
     }
@@ -51,5 +54,19 @@ public class UpdateUserRequest {
 
     public void setRoleIds(List<UUID> roleIds) {
         this.roleIds = roleIds;
+    }
+
+    public Long getTelegramChatId() {
+        return telegramChatId;
+    }
+
+    public void setTelegramChatId(Long telegramChatId) {
+        this.telegramChatId = telegramChatId;
+        this.telegramChatIdPresent = true;
+    }
+
+    @JsonIgnore
+    public boolean isTelegramChatIdPresent() {
+        return telegramChatIdPresent;
     }
 }

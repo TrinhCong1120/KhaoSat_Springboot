@@ -1,7 +1,5 @@
 package com.trinhcong1120.survey_service.controller;
 
-import java.util.UUID;
-
 import com.trinhcong1120.survey_service.dto.submit.SubmitSurveyRequest;
 import com.trinhcong1120.survey_service.dto.submit.SubmitSurveyResponse;
 import com.trinhcong1120.survey_service.dto.survey.SurveyDetailResponse;
@@ -24,37 +22,37 @@ public class PublicSurveyController {
     this.publicSurveyService = publicSurveyService;
   }
 
-  @GetMapping("/{surveyId}")
+  @GetMapping("/{surveyRef}")
   public ResponseEntity<SurveyDetailResponse> getSurvey(
-          @PathVariable UUID surveyId
+          @PathVariable String surveyRef
   ) {
     return ResponseEntity.ok(
             publicSurveyService
-                    .getActiveSurvey(surveyId)
+                    .getActiveSurvey(publicSurveyService.resolveSurveyId(surveyRef))
     );
   }
 
-  @PostMapping("/{surveyId}/submit")
+  @PostMapping("/{surveyRef}/submit")
   public ResponseEntity<SubmitSurveyResponse> submit(
-          @PathVariable UUID surveyId,
+          @PathVariable String surveyRef,
           @Valid @RequestBody SubmitSurveyRequest request
   ) {
     return ResponseEntity.ok(
             publicSurveyService.submit(
-                    surveyId,
+                    publicSurveyService.resolveSurveyId(surveyRef),
                     request
             )
     );
   }
 
-  @PostMapping("/{surveyId}/validate")
+  @PostMapping("/{surveyRef}/validate")
   public ResponseEntity<ValidateSurveyResponse> validate(
-          @PathVariable UUID surveyId,
+          @PathVariable String surveyRef,
           @Valid @RequestBody ValidateSurveyRequest request
   ) {
     return ResponseEntity.ok(
             publicSurveyService.validate(
-                    surveyId,
+                    publicSurveyService.resolveSurveyId(surveyRef),
                     request
             )
     );

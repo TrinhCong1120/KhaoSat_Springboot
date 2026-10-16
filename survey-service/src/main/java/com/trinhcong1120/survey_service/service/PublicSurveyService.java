@@ -16,20 +16,19 @@ import com.trinhcong1120.survey_service.entity.Option;
 import com.trinhcong1120.survey_service.entity.Response;
 import com.trinhcong1120.survey_service.exception.BadRequestException;
 import com.trinhcong1120.survey_service.exception.NotFoundException;
+import com.trinhcong1120.survey_service.exception.SurveyApiException;
 import com.trinhcong1120.survey_service.repository.*;
 import com.trinhcong1120.survey_service.util.ConditionUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.time.Instant;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 @Service
 public class PublicSurveyService {
@@ -47,6 +46,8 @@ public class PublicSurveyService {
   private final QuestionValidationRuleService questionValidationRuleService;
   private final ObjectMapper objectMapper;
   private final TransactionTemplate transactionTemplate;
+  private final SurveyScheduleService schedule;
+  private final SurveyTrackingService tracking;
 
   public PublicSurveyService(
           SurveyRepository surveyRepository,
@@ -61,7 +62,32 @@ public class PublicSurveyService {
           AnswerValidationService answerValidationService,
           QuestionValidationRuleService questionValidationRuleService,
           ObjectMapper objectMapper,
-          TransactionTemplate transactionTemplate
+          TransactionTemplate transactionTemplate,
+          SurveyScheduleService schedule
+  ) {
+    this(surveyRepository, pageRepository, questionRepository, optionRepository,
+        conditionRepository, responseRepository, answerRepository, answerOptionRepository,
+        mediaFileRepository, answerValidationService, questionValidationRuleService,
+        objectMapper, transactionTemplate, schedule, null);
+  }
+
+  @org.springframework.beans.factory.annotation.Autowired
+  public PublicSurveyService(
+          SurveyRepository surveyRepository,
+          PageRepository pageRepository,
+          QuestionRepository questionRepository,
+          OptionRepository optionRepository,
+          ConditionRepository conditionRepository,
+          ResponseRepository responseRepository,
+          AnswerRepository answerRepository,
+          AnswerOptionRepository answerOptionRepository,
+          MediaFileRepository mediaFileRepository,
+          AnswerValidationService answerValidationService,
+          QuestionValidationRuleService questionValidationRuleService,
+          ObjectMapper objectMapper,
+          TransactionTemplate transactionTemplate,
+          SurveyScheduleService schedule,
+          SurveyTrackingService tracking
   ) {
     this.surveyRepository = surveyRepository;
     this.pageRepository = pageRepository;
@@ -76,106 +102,153 @@ public class PublicSurveyService {
     this.questionValidationRuleService = questionValidationRuleService;
     this.objectMapper = objectMapper;
     this.transactionTemplate = transactionTemplate;
+    this.schedule = schedule;
+    this.tracking = tracking;
   }
 
   @Transactional(readOnly = true)
+  public UUID resolveSurveyId(String surveyRef) {
+    try {
+      return UUID.fromString(surveyRef);
+    } catch (IllegalArgumentException ex) {
+      return surveyRepository.findByShareCode(surveyRef)
+              .map(Survey::getId)
+              .orElseThrow(() -> new NotFoundException("Survey khong ton tai"));
+    }
+  }
+
+  @Transactional
   public SurveyDetailResponse getActiveSurvey(UUID surveyId) {
-    Survey survey = getActiveSurveyEntity(surveyId);
+    Survey survey = surveyRepository.findForRead(surveyId)
+            .orElseThrow(() -> new NotFoundException("Survey khong ton tai"));
+    Instant at = schedule.now();
+    List<Page> openPages = requireOpen(survey, at);
+    Set<UUID> openPageIds = openPages.stream().map(Page::getId).collect(java.util.stream.Collectors.toSet());
 
     SurveyDetailResponse response = new SurveyDetailResponse();
     response.setId(survey.getId());
     response.setTitle(survey.getTitle());
+    response.setShareCode(survey.getShareCode());
     response.setDescription(survey.getDescription());
     response.setCreatorUser(survey.getCreatorUser());
     response.setCreatedAt(survey.getCreatedAt());
-    response.setIsActive(survey.getIsActive());
+    response.setStatus(SurveyScheduleService.Status.OPEN.name());
+    response.setOpenAt(schedule.toLocal(survey.getOpenAt()));
+    response.setCloseAt(schedule.toLocal(survey.getCloseAt()));
+    response.setServerTime(schedule.toLocal(at));
     response.setValidationRevision(survey.getValidationRevision());
     response.setMediaFiles(toMediaResponses("SURVEY", survey.getId()));
-    response.setPages(toPageDetailResponses(surveyId));
-    response.setConditions(toConditionResponses(surveyId));
+    response.setPages(openPages.stream().map(this::toPageDetailResponse).toList());
+    List<Condition> conditions = conditionRepository
+            .findBySourceQuestion_Page_Survey_IdOrTargetQuestion_Page_Survey_Id(surveyId, surveyId);
+    Set<UUID> excluded = ConditionUtil.unreachableShowTargets(conditions, openPageIds);
+    response.getPages().forEach(p -> p.setQuestions(p.getQuestions().stream()
+            .filter(q -> !excluded.contains(q.getId())).toList()));
+    response.setConditions(conditions.stream().filter(this::hasConditionQuestions)
+            .filter(c -> openPageIds.contains(c.getSourceQuestion().getPage().getId())
+                    && openPageIds.contains(c.getTargetQuestion().getPage().getId())
+                    && !excluded.contains(c.getSourceQuestion().getId())
+                    && !excluded.contains(c.getTargetQuestion().getId()))
+            .map(this::toConditionResponse).toList());
 
     return response;
   }
 
   @Transactional(readOnly = true)
   public Survey getActiveSurveyEntity(UUID surveyId) {
-    return surveyRepository
-            .findByIdAndIsActiveTrue(surveyId)
+    Survey survey = surveyRepository
+            .findById(surveyId)
             .orElseThrow(() ->
                     new NotFoundException(
-                            "Survey khong ton tai hoac chua duoc kich hoat"));
+                            "Survey khong ton tai"));
+    requireOpen(survey, schedule.now());
+    return survey;
+  }
+
+  private List<Page> requireOpen(Survey survey, Instant at) {
+    List<Page> surveyPages = pageRepository.findBySurvey_IdOrderByOrderIndexAsc(survey.getId());
+    SurveyScheduleService.Status status = schedule.status(survey, surveyPages, at);
+    if (status == SurveyScheduleService.Status.DRAFT)
+      throw new NotFoundException("Survey chua xuat ban");
+    if (status == SurveyScheduleService.Status.SCHEDULED) {
+      boolean phaseEnded = surveyPages.stream()
+              .map(page -> schedule.effectiveClose(survey, page))
+              .anyMatch(close -> close != null && !at.isBefore(close));
+      throw new SurveyApiException("SURVEY_NOT_OPEN", HttpStatus.CONFLICT, phaseEnded
+              ? "Khảo sát đã kết thúc một giai đoạn và đang chờ giai đoạn tiếp theo"
+              : "Khao sat hien chua duoc mo");
+    }
+    if (status == SurveyScheduleService.Status.CLOSED)
+      throw new SurveyApiException("SURVEY_CLOSED", HttpStatus.GONE, "Khao sat da dong");
+    return schedule.openPages(survey, at);
   }
 
   public SubmitSurveyResponse submit(
           UUID surveyId,
           SubmitSurveyRequest request
   ) {
-    Survey survey = getActiveSurveyEntity(surveyId);
-
-    List<SubmitAnswerRequest> answersToSave =
-            answerValidationService.validateAndFilter(
-                    surveyId,
-                    request.getAnswers()
-            );
-
-    UUID requestId =
-            request.getRequestId() == null
-                    ? UUID.randomUUID()
-                    : request.getRequestId();
-
-    java.util.Optional<Response> existingResponse =
-            responseRepository.findByRequestId(requestId);
-
-    if (existingResponse.isPresent()) {
-      Response existing = existingResponse.get();
-
-      if (!Objects.equals(existing.getSurvey().getId(), surveyId)) {
-        throw new BadRequestException("requestId da ton tai o survey khac");
-      }
-
-      return new SubmitSurveyResponse(
-              "Submit thanh cong",
-              existing.getId(),
-              existing.getRequestId()
-      );
-    }
-
+    UUID requestId = request.getRequestId() == null ? UUID.randomUUID() : request.getRequestId();
+    String hash = requestHash(request);
     try {
-      Response response = saveResponse(
-              survey,
-              request,
-              requestId,
-              answersToSave
-      );
-
-      return new SubmitSurveyResponse(
-              "Submit thanh cong",
-              response.getId(),
-              requestId
-      );
-
-    } catch (Exception e) {
-      saveFailedSurvey(
-              surveyId,
-              request,
-              requestId,
-              e
-      );
-
-      return new SubmitSurveyResponse(
-              "Submit thanh cong",
-              null,
-              requestId
-      );
+      return transactionTemplate.execute(tx -> {
+        Optional<Response> existing = responseRepository.findByRequestId(requestId);
+        if (existing.isPresent()) return oldResponse(existing.get(), surveyId, hash);
+        Survey survey = surveyRepository.findForRead(surveyId)
+                .orElseThrow(() -> new NotFoundException("Survey khong ton tai"));
+        Instant at = schedule.now();
+        Set<UUID> pageIds = requireOpen(survey, at).stream().map(Page::getId)
+                .collect(java.util.stream.Collectors.toSet());
+        if (request.getSurveyRevision() == null || !Objects.equals(request.getSurveyRevision(), survey.getValidationRevision()))
+          throw new SurveyApiException("SURVEY_REVISION_CONFLICT", HttpStatus.CONFLICT, "Du lieu khao sat da thay doi, vui long tai lai");
+        List<SubmitAnswerRequest> answers = answerValidationService.validateAndFilter(surveyId, request.getAnswers(), pageIds);
+        if (request.getSessionId() != null) tracking.verifySession(surveyId, request.getSessionId());
+        int[] questionCounts = countQuestionCompleteness(surveyId, pageIds, answers);
+        Response saved = doSaveResponse(survey, request, requestId, answers);
+        saved.setApplicableQuestionCount(questionCounts[0]);
+        saved.setAnsweredQuestionCount(questionCounts[1]);
+        saved.setRequestHash(hash);
+        responseRepository.saveAndFlush(saved);
+        if (request.getSessionId() != null && tracking != null)
+          tracking.recordActiveDuration(request.getSessionId(), request.getActiveDurationMs());
+        return new SubmitSurveyResponse("Submit thanh cong", saved.getId(), requestId);
+      });
+    } catch (org.springframework.dao.DataIntegrityViolationException e) {
+      return responseRepository.findByRequestId(requestId)
+              .map(old -> oldResponse(old, surveyId, hash)).orElseThrow(() -> e);
     }
   }
 
-  @Transactional(readOnly = true)
+  private SubmitSurveyResponse oldResponse(Response existing, UUID surveyId, String hash) {
+    if (!Objects.equals(existing.getSurvey().getId(), surveyId)
+            || existing.getRequestHash() != null && !existing.getRequestHash().equals(hash))
+      throw new SurveyApiException("REQUEST_ID_CONFLICT", HttpStatus.CONFLICT, "requestId da duoc dung voi noi dung khac");
+    return new SubmitSurveyResponse("Submit thanh cong", existing.getId(), existing.getRequestId());
+  }
+
+  private String requestHash(SubmitSurveyRequest request) {
+    try {
+      List<Object> hashParts = new ArrayList<>(List.of(
+          request.getSurveyRevision() == null ? "" : request.getSurveyRevision(),
+          request.getToken() == null ? "" : request.getToken(), request.getAnswers()));
+      // Keep the old hash for legacy clients, but bind a new submission to its Session.
+      if (request.getSessionId() != null) hashParts.add(request.getSessionId());
+      byte[] bytes = objectMapper.writeValueAsBytes(hashParts);
+      return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+    } catch (com.fasterxml.jackson.core.JsonProcessingException | NoSuchAlgorithmException e) {
+      throw new IllegalStateException("Khong the tinh request hash", e);
+    }
+  }
+
+  @Transactional
   public ValidateSurveyResponse validate(
           UUID surveyId,
           ValidateSurveyRequest request
   ) {
-    Survey survey = getActiveSurveyEntity(surveyId);
+    Survey survey = surveyRepository.findForRead(surveyId)
+            .orElseThrow(() -> new NotFoundException("Survey khong ton tai"));
+    Instant at = schedule.now();
+    Set<UUID> openPageIds = requireOpen(survey, at).stream().map(Page::getId)
+            .collect(java.util.stream.Collectors.toSet());
 
     if (request != null
             && request.getSurveyRevision() != null
@@ -183,23 +256,21 @@ public class PublicSurveyService {
             request.getSurveyRevision(),
             survey.getValidationRevision()
     )) {
-      throw new ResponseStatusException(
-              HttpStatus.CONFLICT,
-              "Survey revision da thay doi"
-      );
+      throw new SurveyApiException("SURVEY_REVISION_CONFLICT", HttpStatus.CONFLICT, "Du lieu khao sat da thay doi, vui long tai lai");
     }
 
     AnswerValidationService.ValidationResult result =
             answerValidationService.validateSubmittedOnly(
                     surveyId,
                     request == null ? null : request.getAnswers(),
-                    false
+                    false,
+                    openPageIds
             );
 
     ValidateSurveyResponse response = new ValidateSurveyResponse();
     response.setValid(result.valid());
     response.setSurveyRevision(survey.getValidationRevision());
-    response.setEvaluatedAt(java.time.Instant.now());
+    response.setEvaluatedAt(at);
     response.setFieldErrors(result.fieldErrors());
     response.setQuestionStates(
             result.applicability()
@@ -218,22 +289,6 @@ public class PublicSurveyService {
     return response;
   }
 
-  private Response saveResponse(
-          Survey survey,
-          SubmitSurveyRequest request,
-          UUID requestId,
-          List<SubmitAnswerRequest> answers
-  ) {
-    return transactionTemplate.execute(status ->
-            doSaveResponse(
-                    survey,
-                    request,
-                    requestId,
-                    answers
-            )
-    );
-  }
-
   private Response doSaveResponse(
           Survey survey,
           SubmitSurveyRequest request,
@@ -245,7 +300,8 @@ public class PublicSurveyService {
     response.setSurvey(survey);
     response.setToken(request.getToken());
     response.setRequestId(requestId);
-    response.setSubmittedAt(LocalDateTime.now());
+    response.setSubmittedAtInstant(java.time.Instant.now());
+    response.setSessionId(request.getSessionId());
 
     response = responseRepository.save(response);
 
@@ -319,73 +375,6 @@ public class PublicSurveyService {
     return response;
   }
 
-  private void saveFailedSurvey(
-          UUID surveyId,
-          SubmitSurveyRequest request,
-          UUID requestId,
-          Exception exception
-  ) {
-    try {
-      Path directory =
-              Paths.get(
-                      "public",
-                      "failed-surveys"
-              ).toAbsolutePath().normalize();
-
-      Files.createDirectories(directory);
-
-      Path file =
-              directory.resolve(
-                      "failed_"
-                              + LocalDateTime.now()
-                              .format(
-                                      DateTimeFormatter
-                                              .ofPattern("yyyyMMdd")
-                              )
-                              + ".json"
-              );
-
-      List<Map<String, Object>> records =
-              new ArrayList<>();
-
-      if (Files.exists(file)) {
-        records.addAll(
-                objectMapper.readValue(
-                        Files.readString(file),
-                        objectMapper.getTypeFactory()
-                                .constructCollectionType(
-                                        List.class,
-                                        Map.class
-                                )
-                )
-        );
-      }
-
-      records.add(
-              Map.of(
-                      "requestId",
-                      requestId,
-                      "surveyId",
-                      surveyId,
-                      "failedAt",
-                      LocalDateTime.now(),
-                      "data",
-                      request,
-                      "error",
-                      exception.getMessage() == null
-                              ? exception.getClass().getSimpleName()
-                              : exception.getMessage()
-              )
-      );
-
-      objectMapper
-              .writerWithDefaultPrettyPrinter()
-              .writeValue(file.toFile(), records);
-
-    } catch (Exception ignored) {
-    }
-  }
-
   private void validateRequiredAnswers(
           UUID surveyId,
           List<SubmitAnswerRequest> answers
@@ -443,6 +432,25 @@ public class PublicSurveyService {
                         + question.getQuestionText());
       }
     }
+  }
+
+  private int[] countQuestionCompleteness(UUID surveyId, Set<UUID> openPageIds,
+      List<SubmitAnswerRequest> answers) {
+    List<Question> questions = questionRepository.findByPage_Survey_Id(surveyId).stream()
+        .filter(q -> openPageIds.contains(q.getPage().getId())).toList();
+    List<Condition> conditions = conditionRepository
+        .findBySourceQuestion_Page_Survey_IdOrTargetQuestion_Page_Survey_Id(surveyId, surveyId);
+    Map<UUID, Boolean> applicable = ConditionUtil.calculateApplicability(
+        questions, toConditionAnswers(answers), conditions);
+    Map<UUID, SubmitAnswerRequest> submitted = new HashMap<>();
+    for (SubmitAnswerRequest answer : answers) submitted.put(answer.getQuestionId(), answer);
+    int total = 0, answered = 0;
+    for (Question question : questions) {
+      if (!applicable.getOrDefault(question.getId(), true)) continue;
+      total++;
+      if (hasValue(question, submitted.get(question.getId()))) answered++;
+    }
+    return new int[]{total, answered};
   }
 
   private boolean hasValue(
@@ -811,6 +819,9 @@ public class PublicSurveyService {
     );
 
     response.setMediaFiles(toMediaResponses("PAGE", page.getId()));
+    response.setOpenAt(schedule.toLocal(page.getOpenAt()));
+    response.setCloseAt(schedule.toLocal(page.getCloseAt()));
+    response.setEffectiveCloseAt(schedule.toLocal(schedule.effectiveClose(page.getSurvey(), page)));
     return response;
   }
 

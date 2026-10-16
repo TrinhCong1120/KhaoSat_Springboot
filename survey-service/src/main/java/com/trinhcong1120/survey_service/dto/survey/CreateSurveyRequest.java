@@ -1,6 +1,7 @@
 package com.trinhcong1120.survey_service.dto.survey;
 
 import jakarta.validation.constraints.NotBlank;
+import java.time.LocalDateTime;
 
 public class CreateSurveyRequest {
 
@@ -8,6 +9,8 @@ public class CreateSurveyRequest {
     private String title;
 
     private String description;
+    private LocalDateTime openAt;
+    private LocalDateTime closeAt;
 
     public CreateSurveyRequest() {
     }
@@ -32,5 +35,10 @@ public class CreateSurveyRequest {
     public void setDescription(String description) {
         this.description = description;
     }
+
+    public LocalDateTime getOpenAt() { return openAt; }
+    public void setOpenAt(LocalDateTime openAt) { this.openAt = openAt; }
+    public LocalDateTime getCloseAt() { return closeAt; }
+    public void setCloseAt(LocalDateTime closeAt) { this.closeAt = closeAt; }
 
 }

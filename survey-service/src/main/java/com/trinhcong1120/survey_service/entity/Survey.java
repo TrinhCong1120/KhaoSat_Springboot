@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,6 +21,9 @@ public class Survey {
   @Column(name = "title", length = 500)
   private String title;
 
+  @Column(name = "share_code", length = 24, nullable = false, unique = true)
+  private String shareCode;
+
   @Column(name = "description", columnDefinition = "TEXT")
   private String description;
 
@@ -32,8 +36,20 @@ public class Survey {
   @Column(name = "created_at")
   private LocalDateTime createdAt;
 
-  @Column(name = "is_active")
-  private Boolean isActive;
+  @Column(name = "open_at")
+  private Instant openAt;
+
+  @Column(name = "close_at")
+  private Instant closeAt;
+
+  @Column(name = "published_at")
+  private Instant publishedAt;
+
+  @Column(name = "manually_locked", nullable = false)
+  private boolean manuallyLocked;
+
+  @Column(name = "requires_unlock", nullable = false)
+  private boolean requiresUnlock;
 
   @Column(name = "validation_revision", nullable = false)
   private Long validationRevision = 1L;
@@ -54,6 +70,9 @@ public class Survey {
   public String getTitle() { return title; }
   public void setTitle(String title) { this.title = title; }
 
+  public String getShareCode() { return shareCode; }
+  public void setShareCode(String shareCode) { this.shareCode = shareCode; }
+
   public String getDescription() { return description; }
   public void setDescription(String description) { this.description = description; }
 
@@ -65,8 +84,16 @@ public class Survey {
   public LocalDateTime getCreatedAt() { return createdAt; }
   public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-  public Boolean getIsActive() { return isActive; }
-  public void setIsActive(Boolean active) { isActive = active; }
+  public Instant getOpenAt() { return openAt; }
+  public void setOpenAt(Instant openAt) { this.openAt = openAt; }
+  public Instant getCloseAt() { return closeAt; }
+  public void setCloseAt(Instant closeAt) { this.closeAt = closeAt; }
+  public Instant getPublishedAt() { return publishedAt; }
+  public void setPublishedAt(Instant publishedAt) { this.publishedAt = publishedAt; }
+  public boolean isManuallyLocked() { return manuallyLocked; }
+  public void setManuallyLocked(boolean manuallyLocked) { this.manuallyLocked = manuallyLocked; }
+  public boolean isRequiresUnlock() { return requiresUnlock; }
+  public void setRequiresUnlock(boolean requiresUnlock) { this.requiresUnlock = requiresUnlock; }
 
   public Long getValidationRevision() { return validationRevision; }
   public void setValidationRevision(Long validationRevision) {

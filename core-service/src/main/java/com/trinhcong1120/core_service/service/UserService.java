@@ -13,34 +13,45 @@ import com.trinhcong1120.core_service.producer.NotificationProducer;
 import com.trinhcong1120.core_service.repository.RoleRepository;
 import com.trinhcong1120.core_service.repository.UserRepository;
 import com.trinhcong1120.core_service.exception.BadRequestException;
+import com.trinhcong1120.core_service.dto.common.PagedResponse;
 
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.TreeSet;
 
 @Service
 public class UserService {
+
+    private static final int PAGE_SIZE = 10;
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final NotificationProducer notificationProducer;
+    private final AdminGrantAlertService adminGrantAlertService;
 
     public UserService(
             UserRepository userRepository,
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
-            NotificationProducer notificationProducer
+            NotificationProducer notificationProducer,
+            AdminGrantAlertService adminGrantAlertService
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.notificationProducer = notificationProducer;
+        this.adminGrantAlertService = adminGrantAlertService;
     }
 
     // =========================
@@ -54,6 +65,19 @@ public class UserService {
                 .stream()
                 .map(this::toUserResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PagedResponse<UserResponse> getUsersPage(int page) {
+        validatePage(page);
+        return PagedResponse.from(userRepository
+                .findAll(PageRequest.of(page - 1, PAGE_SIZE,
+                        Sort.by(Sort.Order.asc("username"), Sort.Order.asc("id"))))
+                .map(this::toUserResponse));
+    }
+
+    private void validatePage(int page) {
+        if (page < 1) throw new BadRequestException("page phai bat dau tu 1");
     }
 
     @Transactional(readOnly = true)
@@ -102,7 +126,7 @@ public class UserService {
     // =========================
 
     @Transactional
-    public UUID createUser(CreateUserRequest request) {
+    public UUID createUser(CreateUserRequest request, UUID actorId) {
 
         if (request.getUsername() == null
                 || request.getUsername().isBlank()
@@ -138,6 +162,9 @@ public class UserService {
 
         user.setIsActive(true);
 
+        validateTelegramChatId(request.getTelegramChatId(), null);
+        user.setTelegramChatId(request.getTelegramChatId());
+
         // =========================
         // GÁN ROLE
         // =========================
@@ -162,27 +189,22 @@ public class UserService {
         User savedUser =
                 userRepository.save(user);
 
+        if (hasAdminRole(savedUser)) {
+            adminGrantAlertService.notifyGrant(savedUser, actorId);
+        }
+
+        if (savedUser.getTelegramChatId() != null) {
+            publishTelegramLinked(savedUser);
+        }
+
         // =========================
         // GỬI KAFKA EVENT
         // =========================
 
-        if (savedUser.getEmail() != null
-                && !savedUser.getEmail().isBlank()) {
-
-            NotificationEvent event =
-                    new NotificationEvent(
-                            "USER_CREATED",
-                            savedUser.getEmail(),
-                            savedUser.getUsername(),
-                            "Tài khoản đã được tạo",
-                            "Xin chào "
-                                    + savedUser.getUsername()
-                                    + ", tài khoản của bạn đã được tạo thành công.",
-                            savedUser.getId()
-                    );
-
-            notificationProducer.send(event);
-        }
+        publishUserNotification(savedUser, "USER_CREATED",
+                "Tài khoản đã được tạo",
+                "Xin chào " + savedUser.getUsername()
+                        + ", tài khoản của bạn đã được tạo thành công.");
 
         return savedUser.getId();
     }
@@ -194,7 +216,8 @@ public class UserService {
     @Transactional
     public void updateUser(
             UUID id,
-            UpdateUserRequest request
+            UpdateUserRequest request,
+            UUID actorId
     ) {
 
         User user = userRepository.findById(id)
@@ -212,6 +235,9 @@ public class UserService {
                 Boolean.TRUE.equals(
                         user.getIsActive()
                 );
+        boolean hadAdminRole = hasAdminRole(user);
+        Long oldTelegramChatId = user.getTelegramChatId();
+        Set<String> oldRoles = roleNames(user);
 
         // =========================
         // UPDATE EMAIL
@@ -277,12 +303,31 @@ public class UserService {
             );
         }
 
+        if (request.isTelegramChatIdPresent()) {
+            validateTelegramChatId(request.getTelegramChatId(), id);
+            user.setTelegramChatId(request.getTelegramChatId());
+        }
+
         // =========================
         // SAVE
         // =========================
 
         User savedUser =
                 userRepository.save(user);
+
+        if (!hadAdminRole && hasAdminRole(savedUser)) {
+            adminGrantAlertService.notifyGrant(savedUser, actorId);
+        }
+
+        if (savedUser.getTelegramChatId() != null
+                && !savedUser.getTelegramChatId().equals(oldTelegramChatId)) {
+            publishTelegramLinked(savedUser);
+        }
+
+        Set<String> newRoles = roleNames(savedUser);
+        if (!oldRoles.equals(newRoles) && savedUser.getTelegramChatId() != null) {
+            publishRoleChanges(savedUser, oldRoles, newRoles);
+        }
 
         // =========================
         // KIỂM TRA USER VỪA BỊ KHÓA
@@ -301,24 +346,11 @@ public class UserService {
          * Không gửi lại nếu user vốn
          * đã bị khóa từ trước.
          */
-        if (wasActive
-                && isNowInactive
-                && savedUser.getEmail() != null
-                && !savedUser.getEmail().isBlank()) {
-
-            NotificationEvent event =
-                    new NotificationEvent(
-                            "USER_DEACTIVATED",
-                            savedUser.getEmail(),
-                            savedUser.getUsername(),
-                            "Tài khoản đã bị khóa",
-                            "Xin chào "
-                                    + savedUser.getUsername()
-                                    + ", tài khoản của bạn đã bị khóa.",
-                            savedUser.getId()
-                    );
-
-            notificationProducer.send(event);
+        if (wasActive && isNowInactive) {
+            publishUserNotification(savedUser, "USER_DEACTIVATED",
+                    "Tài khoản đã bị khóa",
+                    "Xin chào " + savedUser.getUsername()
+                            + ", tài khoản của bạn đã bị khóa.");
         }
     }
 
@@ -358,7 +390,8 @@ public class UserService {
                 user.getUsername(),
                 user.getEmail(),
                 user.getIsActive(),
-                roles
+                roles,
+                user.getTelegramChatId()
         );
     }
 
@@ -377,5 +410,101 @@ public class UserService {
         }
 
         return email.trim();
+    }
+
+    private boolean hasAdminRole(User user) {
+        return user.getRoles().stream()
+                .anyMatch(role -> "admin".equalsIgnoreCase(role.getName()));
+    }
+
+    private void validateTelegramChatId(Long chatId, UUID currentUserId) {
+        if (chatId == null) {
+            return;
+        }
+        if (chatId <= 0) {
+            throw new BadRequestException("Telegram Chat ID phải là số nguyên dương");
+        }
+        boolean used = currentUserId == null
+                ? userRepository.existsByTelegramChatId(chatId)
+                : userRepository.existsByTelegramChatIdAndIdNot(chatId, currentUserId);
+        if (used) {
+            throw new BadRequestException("Telegram Chat ID đã được liên kết với tài khoản khác");
+        }
+    }
+
+    private void publishUserNotification(User user, String type, String subject, String message) {
+        List<NotificationEvent> events = new java.util.ArrayList<>();
+        if (user.getEmail() != null && !user.getEmail().isBlank()) {
+            events.add(new NotificationEvent(type, user.getEmail().trim(), user.getUsername(),
+                    subject, message, user.getId()));
+        }
+        if (user.getTelegramChatId() != null) {
+            events.add(new NotificationEvent(type, null, user.getUsername(), subject, message,
+                    user.getId(), user.getTelegramChatId()));
+        }
+        if (events.isEmpty()) {
+            return;
+        }
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            events.forEach(notificationProducer::send);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                events.forEach(notificationProducer::send);
+            }
+        });
+    }
+
+    private void publishTelegramLinked(User user) {
+        String email = maskEmail(user.getEmail());
+        publishTelegramNotification(user, "TELEGRAM_ACCOUNT_LINKED",
+                "Liên kết Telegram thành công",
+                "Tài khoản của bạn vừa được liên kết với Telegram.\n"
+                        + "Tên đăng nhập: " + user.getUsername() + "\n"
+                        + "Email: " + (email == null ? "Chưa có email" : email));
+    }
+
+    private void publishRoleChanges(User user, Set<String> oldRoles, Set<String> newRoles) {
+        Set<String> added = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        added.addAll(newRoles);
+        added.removeAll(oldRoles);
+        Set<String> removed = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        removed.addAll(oldRoles);
+        removed.removeAll(newRoles);
+
+        StringBuilder message = new StringBuilder("Quyền của tài khoản ")
+                .append(user.getUsername()).append(" vừa được cập nhật.");
+        if (!added.isEmpty()) {
+            message.append("\nQuyền được thêm: ").append(String.join(", ", added));
+        }
+        if (!removed.isEmpty()) {
+            message.append("\nQuyền bị gỡ: ").append(String.join(", ", removed));
+        }
+        publishTelegramNotification(user, "USER_ROLES_CHANGED",
+                "Quyền tài khoản đã thay đổi", message.toString());
+    }
+
+    private void publishTelegramNotification(User user, String type, String subject, String message) {
+        NotificationEvent event = new NotificationEvent(type, null, user.getUsername(), subject,
+                message, user.getId(), user.getTelegramChatId());
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            notificationProducer.send(event);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                notificationProducer.send(event);
+            }
+        });
+    }
+
+    private Set<String> roleNames(User user) {
+        Set<String> names = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        user.getRoles().stream().map(Role::getName).filter(java.util.Objects::nonNull)
+                .forEach(names::add);
+        return names;
     }
 }

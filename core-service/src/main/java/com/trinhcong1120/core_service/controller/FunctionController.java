@@ -6,6 +6,7 @@ import com.trinhcong1120.core_service.dto.function.FunctionDetailResponse;
 import com.trinhcong1120.core_service.dto.function.FunctionResponse;
 import com.trinhcong1120.core_service.dto.function.UpdatePermissionRequest;
 import com.trinhcong1120.core_service.service.FunctionService;
+import com.trinhcong1120.core_service.dto.common.PagedResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +35,13 @@ public class FunctionController {
         return ResponseEntity.ok(
                 functionService.getAllFunctions()
         );
+    }
+
+    @PreAuthorize("hasAuthority('function_view')")
+    @GetMapping("/page")
+    public ResponseEntity<PagedResponse<FunctionResponse>> getFunctionsPage(
+            @RequestParam(defaultValue = "1") int page) {
+        return ResponseEntity.ok(functionService.getFunctionsPage(page));
     }
 
     @PreAuthorize("hasAuthority('function_view')")

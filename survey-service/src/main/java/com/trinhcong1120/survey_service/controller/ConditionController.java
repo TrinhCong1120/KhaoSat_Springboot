@@ -6,6 +6,7 @@ import com.trinhcong1120.survey_service.dto.condition.*;
 import com.trinhcong1120.survey_service.service.ConditionService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +25,7 @@ public class ConditionController {
   }
 
   @GetMapping
+  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all', 'survey_update_all')")
   public ResponseEntity<List<ConditionResponse>> getAll() {
     return ResponseEntity.ok(
             conditionService.getAll()
@@ -31,6 +33,7 @@ public class ConditionController {
   }
 
   @GetMapping("/survey/{surveyId}")
+  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all', 'survey_update_all')")
   public ResponseEntity<List<ConditionResponse>> getBySurvey(
           @PathVariable UUID surveyId
   ) {
@@ -42,6 +45,7 @@ public class ConditionController {
   }
 
   @PostMapping
+  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
   public ResponseEntity<ConditionResponse> create(
           @Valid @RequestBody CreateConditionRequest request
   ) {
@@ -51,6 +55,7 @@ public class ConditionController {
   }
 
   @PutMapping("/{id}")
+  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
   public ResponseEntity<ConditionResponse> update(
           @PathVariable UUID id,
           @Valid @RequestBody UpdateConditionRequest request
@@ -64,6 +69,7 @@ public class ConditionController {
   }
 
   @DeleteMapping("/{id}")
+  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
   public ResponseEntity<Map<String, String>> delete(
           @PathVariable UUID id
   ) {

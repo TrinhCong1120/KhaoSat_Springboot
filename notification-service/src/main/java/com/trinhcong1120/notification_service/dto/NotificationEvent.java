@@ -16,6 +16,8 @@ public class NotificationEvent {
 
     private UUID referenceId;
 
+    private Long telegramChatId;
+
     public NotificationEvent() {
     }
 
@@ -27,12 +29,25 @@ public class NotificationEvent {
             String message,
             UUID referenceId
     ) {
+        this(eventType, email, username, subject, message, referenceId, null);
+    }
+
+    public NotificationEvent(
+            String eventType,
+            String email,
+            String username,
+            String subject,
+            String message,
+            UUID referenceId,
+            Long telegramChatId
+    ) {
         this.eventType = eventType;
         this.email = email;
         this.username = username;
         this.subject = subject;
         this.message = message;
         this.referenceId = referenceId;
+        this.telegramChatId = telegramChatId;
     }
 
     public String getEventType() {
@@ -81,5 +96,13 @@ public class NotificationEvent {
 
     public void setReferenceId(UUID referenceId) {
         this.referenceId = referenceId;
+    }
+
+    public Long getTelegramChatId() {
+        return telegramChatId;
+    }
+
+    public void setTelegramChatId(Long telegramChatId) {
+        this.telegramChatId = telegramChatId;
     }
 }

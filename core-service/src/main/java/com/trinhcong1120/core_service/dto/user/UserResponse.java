@@ -11,6 +11,7 @@ public class UserResponse {
     private String email;
     private Boolean isActive;
     private List<String> roles;
+    private Long telegramChatId;
 
     public UserResponse() {
     }
@@ -20,13 +21,15 @@ public class UserResponse {
             String username,
             String email,
             Boolean isActive,
-            List<String> roles) {
+            List<String> roles,
+            Long telegramChatId) {
 
         this.id = id;
         this.username = username;
         this.email = email;
         this.isActive = isActive;
         this.roles = roles;
+        this.telegramChatId = telegramChatId;
     }
 
     public UUID getId() {
@@ -47,5 +50,9 @@ public class UserResponse {
 
     public List<String> getRoles() {
         return roles;
+    }
+
+    public Long getTelegramChatId() {
+        return telegramChatId;
     }
 }

@@ -1,10 +1,12 @@
 package com.trinhcong1120.survey_service.dto.survey;
 
 import java.util.UUID;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 import com.trinhcong1120.survey_service.dto.condition.ConditionResponse;
 import com.trinhcong1120.survey_service.dto.media.MediaUploadResponse;
 import com.trinhcong1120.survey_service.dto.question.QuestionResponse;
+import com.trinhcong1120.survey_service.dto.validation.ValidationRuleCatalogResponse;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -14,16 +16,23 @@ public class SurveyDetailResponse {
 
     private UUID id;
     private String title;
+    private String shareCode;
     private String description;
     private String creatorUser;
     private UUID creatorUserId;
     private LocalDateTime createdAt;
-    private Boolean isActive;
+    private String status;
+    private LocalDateTime openAt;
+    private LocalDateTime closeAt;
+    private LocalDateTime serverTime;
     private Long validationRevision;
+    private List<ScheduleWarning> scheduleWarnings = new ArrayList<>();
     private List<MediaUploadResponse> mediaFiles = new ArrayList<>();
 
     private List<PageDetailResponse> pages = new ArrayList<>();
     private List<ConditionResponse> conditions = new ArrayList<>();
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private ValidationRuleCatalogResponse validationRuleCatalog;
 
     public SurveyDetailResponse() {
     }
@@ -43,6 +52,9 @@ public class SurveyDetailResponse {
     public void setTitle(String title) {
         this.title = title;
     }
+
+    public String getShareCode() { return shareCode; }
+    public void setShareCode(String shareCode) { this.shareCode = shareCode; }
 
     public String getDescription() {
         return description;
@@ -71,13 +83,18 @@ public class SurveyDetailResponse {
         this.createdAt = createdAt;
     }
 
-    public Boolean getIsActive() {
-        return isActive;
-    }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public LocalDateTime getOpenAt() { return openAt; }
+    public void setOpenAt(LocalDateTime openAt) { this.openAt = openAt; }
+    public LocalDateTime getCloseAt() { return closeAt; }
+    public void setCloseAt(LocalDateTime closeAt) { this.closeAt = closeAt; }
+    public LocalDateTime getServerTime() { return serverTime; }
+    public void setServerTime(LocalDateTime serverTime) { this.serverTime = serverTime; }
+    public List<ScheduleWarning> getScheduleWarnings() { return scheduleWarnings; }
+    public void setScheduleWarnings(List<ScheduleWarning> scheduleWarnings) { this.scheduleWarnings = scheduleWarnings; }
 
-    public void setIsActive(Boolean active) {
-        isActive = active;
-    }
+    public record ScheduleWarning(UUID conditionId, String message) {}
 
     public Long getValidationRevision() {
         return validationRevision;
@@ -111,12 +128,23 @@ public class SurveyDetailResponse {
         this.conditions = conditions;
     }
 
+    public ValidationRuleCatalogResponse getValidationRuleCatalog() {
+        return validationRuleCatalog;
+    }
+
+    public void setValidationRuleCatalog(ValidationRuleCatalogResponse validationRuleCatalog) {
+        this.validationRuleCatalog = validationRuleCatalog;
+    }
+
     public static class PageDetailResponse {
 
         private UUID id;
         private String title;
         private String description;
         private Integer orderIndex;
+        private LocalDateTime openAt;
+        private LocalDateTime closeAt;
+        private LocalDateTime effectiveCloseAt;
         private List<MediaUploadResponse> mediaFiles = new ArrayList<>();
 
         private List<QuestionResponse> questions = new ArrayList<>();
@@ -178,6 +206,12 @@ public class SurveyDetailResponse {
         public void setOrderIndex(Integer orderIndex) {
             this.orderIndex = orderIndex;
         }
+        public LocalDateTime getOpenAt() { return openAt; }
+        public void setOpenAt(LocalDateTime openAt) { this.openAt = openAt; }
+        public LocalDateTime getCloseAt() { return closeAt; }
+        public void setCloseAt(LocalDateTime closeAt) { this.closeAt = closeAt; }
+        public LocalDateTime getEffectiveCloseAt() { return effectiveCloseAt; }
+        public void setEffectiveCloseAt(LocalDateTime effectiveCloseAt) { this.effectiveCloseAt = effectiveCloseAt; }
 
         public List<QuestionResponse> getQuestions() {
             return questions;

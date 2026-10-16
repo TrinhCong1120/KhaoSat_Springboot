@@ -15,6 +15,8 @@ import java.util.List;
 public interface QuestionRepository extends JpaRepository<Question, UUID> {
 
   List<Question> findByPage_IdOrderByOrderIndexAsc(UUID pageId);
+  boolean existsByIdAndPage_Survey_Id(UUID questionId, UUID surveyId);
+  boolean existsByIdAndPage_Id(UUID questionId, UUID pageId);
 
   List<Question> findByPage_Survey_Id(UUID surveyId);
 

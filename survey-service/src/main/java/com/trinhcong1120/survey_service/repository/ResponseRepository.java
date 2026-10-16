@@ -2,19 +2,20 @@ package com.trinhcong1120.survey_service.repository;
 
 import com.trinhcong1120.survey_service.entity.Response;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface ResponseRepository
-        extends JpaRepository<Response, UUID> {
+        extends JpaRepository<Response, UUID>, JpaSpecificationExecutor<Response> {
 
   List<Response> findBySurvey_IdOrderBySubmittedAtDesc(
           UUID surveyId
@@ -30,13 +31,13 @@ public interface ResponseRepository
 
   long countBySurvey_IdAndSubmittedAtBetween(
           UUID surveyId,
-          LocalDateTime from,
-          LocalDateTime to
+          Instant from,
+          Instant to
   );
 
   long countBySubmittedAtBetween(
-          LocalDateTime from,
-          LocalDateTime to
+          Instant from,
+          Instant to
   );
 
   @Modifying

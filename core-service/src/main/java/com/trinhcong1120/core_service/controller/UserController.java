@@ -7,6 +7,7 @@ import com.trinhcong1120.core_service.dto.user.UpdateUserRequest;
 import com.trinhcong1120.core_service.dto.user.UserSearchResponse;
 import com.trinhcong1120.core_service.dto.user.UserResponse;
 import com.trinhcong1120.core_service.service.UserService;
+import com.trinhcong1120.core_service.dto.common.PagedResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,6 +35,13 @@ public class UserController {
         );
     }
 
+    @PreAuthorize("hasAuthority('user_view')")
+    @GetMapping("/page")
+    public ResponseEntity<PagedResponse<UserResponse>> getUsersPage(
+            @RequestParam(defaultValue = "1") int page) {
+        return ResponseEntity.ok(userService.getUsersPage(page));
+    }
+
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getMe(
             Authentication authentication
@@ -56,10 +64,11 @@ public class UserController {
     @PreAuthorize("hasAuthority('user_create')")
     @PostMapping
     public ResponseEntity<Map<String, Object>> createUser(
-            @Valid @RequestBody CreateUserRequest request) {
+            @Valid @RequestBody CreateUserRequest request,
+            Authentication authentication) {
 
         UUID userId =
-                userService.createUser(request);
+                userService.createUser(request, UUID.fromString(authentication.getName()));
 
         return ResponseEntity.ok(
                 Map.of(
@@ -73,9 +82,10 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<String> updateUser(
             @PathVariable UUID id,
-            @Valid @RequestBody UpdateUserRequest request) {
+            @Valid @RequestBody UpdateUserRequest request,
+            Authentication authentication) {
 
-        userService.updateUser(id, request);
+        userService.updateUser(id, request, UUID.fromString(authentication.getName()));
 
         return ResponseEntity.ok(
                 "Cập nhật user "

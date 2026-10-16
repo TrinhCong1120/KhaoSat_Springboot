@@ -22,6 +22,8 @@ public class CreateUserRequest {
 
     private List<UUID> roleIds;
 
+    private Long telegramChatId;
+
     public CreateUserRequest() {
     }
 
@@ -55,5 +57,13 @@ public class CreateUserRequest {
 
     public void setRoleIds(List<UUID> roleIds) {
         this.roleIds = roleIds;
+    }
+
+    public Long getTelegramChatId() {
+        return telegramChatId;
+    }
+
+    public void setTelegramChatId(Long telegramChatId) {
+        this.telegramChatId = telegramChatId;
     }
 }

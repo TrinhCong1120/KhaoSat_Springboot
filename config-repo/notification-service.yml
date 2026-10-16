@@ -30,6 +30,9 @@
           auth: true
           starttls:
             enable: true
+  telegram:
+    bot:
+      token: ${TELEGRAM_BOT_TOKEN:}
 
 server:
   port: 8083

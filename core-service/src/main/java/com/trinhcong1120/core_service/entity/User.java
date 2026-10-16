@@ -27,6 +27,9 @@ public class User {
     @Column(name = "is_active")
     private Boolean isActive;
 
+    @Column(name = "telegram_chat_id", unique = true)
+    private Long telegramChatId;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "user_roles",
@@ -76,6 +79,14 @@ public class User {
 
     public void setIsActive(Boolean active) {
         isActive = active;
+    }
+
+    public Long getTelegramChatId() {
+        return telegramChatId;
+    }
+
+    public void setTelegramChatId(Long telegramChatId) {
+        this.telegramChatId = telegramChatId;
     }
 
     public Set<Role> getRoles() {

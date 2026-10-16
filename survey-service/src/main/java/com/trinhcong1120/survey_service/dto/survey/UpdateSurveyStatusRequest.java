@@ -1,24 +1,24 @@
 package com.trinhcong1120.survey_service.dto.survey;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 
 public class UpdateSurveyStatusRequest {
 
-    @NotNull(message = "Trạng thái khảo sát không được để trống")
-    private Boolean isActive;
+    @NotBlank(message = "Hành động trạng thái không được để trống")
+    private String action;
 
     public UpdateSurveyStatusRequest() {
     }
 
-    public UpdateSurveyStatusRequest(Boolean isActive) {
-        this.isActive = isActive;
+    public UpdateSurveyStatusRequest(String action) {
+        this.action = action;
     }
 
-    public Boolean getIsActive() {
-        return isActive;
+    public String getAction() {
+        return action;
     }
 
-    public void setIsActive(Boolean active) {
-        isActive = active;
+    public void setAction(String action) {
+        this.action = action;
     }
 }

@@ -10,6 +10,9 @@ import com.trinhcong1120.core_service.entity.Role;
 import com.trinhcong1120.core_service.exception.BadRequestException;
 import com.trinhcong1120.core_service.exception.NotFoundException;
 import com.trinhcong1120.core_service.repository.RoleRepository;
+import com.trinhcong1120.core_service.dto.common.PagedResponse;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +20,8 @@ import java.util.List;
 
 @Service
 public class RoleService {
+
+    private static final int PAGE_SIZE = 10;
 
     private final RoleRepository roleRepository;
 
@@ -45,6 +50,20 @@ public class RoleService {
                         )
                 )
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PagedResponse<RoleResponse> getRolesPage(int page) {
+        if (page < 1) throw new BadRequestException("page phai bat dau tu 1");
+        return PagedResponse.from(roleRepository
+                .findAll(PageRequest.of(page - 1, PAGE_SIZE,
+                        Sort.by(Sort.Order.asc("name"), Sort.Order.asc("id"))))
+                .map(this::toResponse));
+    }
+
+    private RoleResponse toResponse(Role role) {
+        return new RoleResponse(role.getId(), role.getName(), role.getPermissions().stream()
+                .map(permission -> permission.getCode()).distinct().toList());
     }
 
     @Transactional(readOnly = true)

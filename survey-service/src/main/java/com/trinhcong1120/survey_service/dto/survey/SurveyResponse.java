@@ -11,11 +11,14 @@ public class SurveyResponse {
 
     private UUID id;
     private String title;
+    private String shareCode;
     private String description;
     private String creatorUser;
     private UUID creatorUserId;
     private LocalDateTime createdAt;
-    private Boolean isActive;
+    private String status;
+    private LocalDateTime openAt;
+    private LocalDateTime closeAt;
     private List<MediaUploadResponse> mediaFiles = new ArrayList<>();
 
     public SurveyResponse() {
@@ -27,14 +30,14 @@ public class SurveyResponse {
             String description,
             String creatorUser,
             LocalDateTime createdAt,
-            Boolean isActive
+            String status
     ) {
         this.id = id;
         this.title = title;
         this.description = description;
         this.creatorUser = creatorUser;
         this.createdAt = createdAt;
-        this.isActive = isActive;
+        this.status = status;
     }
 
     public UUID getId() {
@@ -52,6 +55,9 @@ public class SurveyResponse {
     public void setTitle(String title) {
         this.title = title;
     }
+
+    public String getShareCode() { return shareCode; }
+    public void setShareCode(String shareCode) { this.shareCode = shareCode; }
 
     public String getDescription() {
         return description;
@@ -80,13 +86,12 @@ public class SurveyResponse {
         this.createdAt = createdAt;
     }
 
-    public Boolean getIsActive() {
-        return isActive;
-    }
-
-    public void setIsActive(Boolean active) {
-        isActive = active;
-    }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public LocalDateTime getOpenAt() { return openAt; }
+    public void setOpenAt(LocalDateTime openAt) { this.openAt = openAt; }
+    public LocalDateTime getCloseAt() { return closeAt; }
+    public void setCloseAt(LocalDateTime closeAt) { this.closeAt = closeAt; }
 
     public List<MediaUploadResponse> getMediaFiles() {
         return mediaFiles;

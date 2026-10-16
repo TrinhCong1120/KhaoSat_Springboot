@@ -12,6 +12,10 @@ import com.trinhcong1120.core_service.exception.NotFoundException;
 import com.trinhcong1120.core_service.repository.FunctionRepository;
 import com.trinhcong1120.core_service.repository.PermissionRepository;
 import com.trinhcong1120.core_service.repository.RoleRepository;
+import com.trinhcong1120.core_service.dto.common.PagedResponse;
+import com.trinhcong1120.core_service.exception.BadRequestException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +24,8 @@ import java.util.Map;
 
 @Service
 public class FunctionService {
+
+    private static final int PAGE_SIZE = 10;
 
     private final FunctionRepository functionRepository;
     private final RoleRepository roleRepository;
@@ -51,6 +57,15 @@ public class FunctionService {
     }
 
     @Transactional(readOnly = true)
+    public PagedResponse<FunctionResponse> getFunctionsPage(int page) {
+        if (page < 1) throw new BadRequestException("page phai bat dau tu 1");
+        return PagedResponse.from(functionRepository
+                .findAll(PageRequest.of(page - 1, PAGE_SIZE,
+                        Sort.by(Sort.Order.asc("name"), Sort.Order.asc("id"))))
+                .map(function -> new FunctionResponse(function.getId(), function.getName(), function.getCode())));
+    }
+
+    @Transactional(readOnly = true)
     public List<FunctionDetailResponse> getFunctionDetail(
             UUID functionId) {
 
@@ -76,9 +91,6 @@ public class FunctionService {
                                                     permission.getId(),
                                                     permission.getCode(),
                                                     permission.getType(),
-                                                    getAction(
-                                                            permission.getCode()
-                                                    ),
                                                     role.getPermissions()
                                                             .contains(permission)
                                             )
@@ -138,10 +150,5 @@ public class FunctionService {
                         request.getIsActive()
                 )
         );
-    }
-
-    private String getAction(String code) {
-        int separator = code.indexOf('_');
-        return separator < 0 ? code : code.substring(separator + 1);
     }
 }

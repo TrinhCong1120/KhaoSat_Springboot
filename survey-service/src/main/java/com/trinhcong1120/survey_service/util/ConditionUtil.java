@@ -13,6 +13,25 @@ import java.util.*;
 
 public final class ConditionUtil {
 
+  public static Set<UUID> unreachableShowTargets(List<Condition> conditions, Set<UUID> openPageIds) {
+    List<Condition> shows = conditions.stream()
+        .filter(c -> c.getSourceQuestion() != null && c.getTargetQuestion() != null)
+        .filter(c -> "SHOW".equalsIgnoreCase(c.getAction())).toList();
+    Set<UUID> excluded = new HashSet<>();
+    boolean changed;
+    do {
+      changed = false;
+      for (UUID targetId : shows.stream().map(c -> c.getTargetQuestion().getId()).distinct().toList()) {
+        List<Condition> targetShows = shows.stream()
+            .filter(c -> targetId.equals(c.getTargetQuestion().getId())).toList();
+        if (targetShows.stream().allMatch(c -> !openPageIds.contains(c.getSourceQuestion().getPage().getId())
+            || excluded.contains(c.getSourceQuestion().getId())))
+          changed |= excluded.add(targetId);
+      }
+    } while (changed);
+    return excluded;
+  }
+
   private static final DateTimeFormatter DATE_FORMATTER =
           DateTimeFormatter.ofPattern("yyyy-MM-dd");
 

@@ -19,7 +19,15 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     boolean existsByUsername(String username);
 
+    boolean existsByTelegramChatId(Long telegramChatId);
+
+    boolean existsByTelegramChatIdAndIdNot(Long telegramChatId, UUID id);
+
     Optional<User> findByIdAndIsActiveTrue(UUID id);
+
+    @Query("select distinct u from User u join u.roles r "
+            + "where u.isActive = true and lower(r.name) = 'admin'")
+    List<User> findActiveAdmins();
 
     @Query("select u from User u where u.isActive = true "
             + "and (lower(u.username) = :query or lower(u.email) = :query) "

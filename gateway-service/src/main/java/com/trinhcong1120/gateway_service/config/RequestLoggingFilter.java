@@ -24,16 +24,14 @@ public class RequestLoggingFilter implements WebFilter {
 
     String method = exchange.getRequest().getMethod().name();
     String path = exchange.getRequest().getURI().getRawPath();
-    String query = exchange.getRequest().getURI().getRawQuery();
-    String pathWithQuery = query == null ? path : path + "?" + query;
     String remoteAddress = exchange.getRequest().getRemoteAddress() == null
             ? "unknown"
             : exchange.getRequest().getRemoteAddress().getAddress().getHostAddress();
 
-    log.info(
+    log.debug(
             "Gateway request started: {} {} from {}",
             method,
-            pathWithQuery,
+            path,
             remoteAddress
     );
 
@@ -49,13 +47,13 @@ public class RequestLoggingFilter implements WebFilter {
                       ? 200
                       : exchange.getResponse().getStatusCode().value();
 
-      log.info(
-              "Gateway request completed: {} {} -> {} in {} ms",
-              method,
-                      pathWithQuery,
-                      status,
-              stopWatch.getTotalTimeMillis()
-      );
+      if (status == 429) {
+        log.debug("Gateway request limited: {} {} in {} ms", method, path,
+                stopWatch.getTotalTimeMillis());
+      } else {
+        log.info("Gateway request completed: {} {} -> {} in {} ms", method, path,
+                status, stopWatch.getTotalTimeMillis());
+      }
             });
   }
 }

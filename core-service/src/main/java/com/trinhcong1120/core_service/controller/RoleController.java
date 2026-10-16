@@ -8,6 +8,7 @@ import com.trinhcong1120.core_service.dto.role.RoleResponse;
 import com.trinhcong1120.core_service.dto.role.UpdateRoleRequest;
 import com.trinhcong1120.core_service.entity.Role;
 import com.trinhcong1120.core_service.service.RoleService;
+import com.trinhcong1120.core_service.dto.common.PagedResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +33,13 @@ public class RoleController {
         return ResponseEntity.ok(
                 roleService.getAllRoles()
         );
+    }
+
+    @PreAuthorize("hasAuthority('role_view')")
+    @GetMapping("/page")
+    public ResponseEntity<PagedResponse<RoleResponse>> getRolesPage(
+            @RequestParam(defaultValue = "1") int page) {
+        return ResponseEntity.ok(roleService.getRolesPage(page));
     }
 
     @PreAuthorize("hasAuthority('role_view')")

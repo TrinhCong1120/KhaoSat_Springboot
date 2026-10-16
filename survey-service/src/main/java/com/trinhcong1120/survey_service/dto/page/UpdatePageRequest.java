@@ -2,6 +2,7 @@ package com.trinhcong1120.survey_service.dto.page;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.time.LocalDateTime;
 
 public class UpdatePageRequest {
 
@@ -12,6 +13,10 @@ public class UpdatePageRequest {
 
     @NotNull(message = "Thứ tự trang không được để trống")
     private Integer orderIndex;
+    private LocalDateTime openAt;
+    private LocalDateTime closeAt;
+    private boolean openAtPresent;
+    private boolean closeAtPresent;
 
     public UpdatePageRequest() {
     }
@@ -39,4 +44,10 @@ public class UpdatePageRequest {
     public void setOrderIndex(Integer orderIndex) {
         this.orderIndex = orderIndex;
     }
+    public LocalDateTime getOpenAt() { return openAt; }
+    public void setOpenAt(LocalDateTime openAt) { this.openAt = openAt; this.openAtPresent = true; }
+    public LocalDateTime getCloseAt() { return closeAt; }
+    public void setCloseAt(LocalDateTime closeAt) { this.closeAt = closeAt; this.closeAtPresent = true; }
+    @com.fasterxml.jackson.annotation.JsonIgnore public boolean isOpenAtPresent() { return openAtPresent; }
+    @com.fasterxml.jackson.annotation.JsonIgnore public boolean isCloseAtPresent() { return closeAtPresent; }
 }

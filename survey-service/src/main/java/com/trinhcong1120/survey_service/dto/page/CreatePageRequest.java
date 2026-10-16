@@ -1,6 +1,7 @@
 package com.trinhcong1120.survey_service.dto.page;
 
 import java.util.UUID;
+import java.time.LocalDateTime;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -17,6 +18,8 @@ public class CreatePageRequest {
 
     @NotNull(message = "Thứ tự trang không được để trống")
     private Integer orderIndex;
+    private LocalDateTime openAt;
+    private LocalDateTime closeAt;
 
     public CreatePageRequest() {
     }
@@ -52,4 +55,8 @@ public class CreatePageRequest {
     public void setOrderIndex(Integer orderIndex) {
         this.orderIndex = orderIndex;
     }
+    public LocalDateTime getOpenAt() { return openAt; }
+    public void setOpenAt(LocalDateTime openAt) { this.openAt = openAt; }
+    public LocalDateTime getCloseAt() { return closeAt; }
+    public void setCloseAt(LocalDateTime closeAt) { this.closeAt = closeAt; }
 }

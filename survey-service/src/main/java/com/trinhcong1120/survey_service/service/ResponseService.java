@@ -2,6 +2,7 @@ package com.trinhcong1120.survey_service.service;
 
 import java.util.UUID;
 
+import com.trinhcong1120.survey_service.dto.common.PagedResponse;
 import com.trinhcong1120.survey_service.dto.filter.ResponseFilterRequest;
 import com.trinhcong1120.survey_service.dto.media.MediaUploadResponse;
 import com.trinhcong1120.survey_service.dto.response.ResponseDetailResponse;
@@ -11,14 +12,26 @@ import com.trinhcong1120.survey_service.dto.response.ResponseQuestionResponse;
 import com.trinhcong1120.survey_service.entity.*;
 import com.trinhcong1120.survey_service.entity.Response;
 import com.trinhcong1120.survey_service.exception.NotFoundException;
+import com.trinhcong1120.survey_service.exception.BadRequestException;
 import com.trinhcong1120.survey_service.repository.*;
 import com.trinhcong1120.survey_service.util.AnswerValueUtil;
 import com.trinhcong1120.survey_service.util.ConditionUtil;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
+import org.hibernate.query.criteria.JpaExpression;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -26,6 +39,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(readOnly = true)
 public class ResponseService {
+
+  private static final int PAGE_SIZE = 10;
 
   private final ResponseRepository responseRepository;
   private final com.trinhcong1120.survey_service.security.SurveyAccessGuard guard;
@@ -56,37 +71,174 @@ public class ResponseService {
     this.mediaFileRepository = mediaFileRepository;
   }
 
-  public List<ResponseListResponse> getBySurvey(
-          UUID surveyId
+  public PagedResponse<ResponseListResponse> getBySurvey(
+          UUID surveyId,
+          int page,
+          String query
   ) {
     guard.view(surveyId);
-    return responseRepository
-            .findBySurvey_IdOrderBySubmittedAtDesc(
-                    surveyId
-            )
-            .stream()
-            .map(this::toListResponse)
-            .toList();
+    return findPage(surveyId, null, query, page);
   }
 
-  public List<ResponseListResponse> filter(
+  public PagedResponse<ResponseListResponse> filter(
           UUID surveyId,
-          ResponseFilterRequest request
+          ResponseFilterRequest request,
+          int page,
+          String query
   ) {
     guard.view(surveyId);
-    return responseRepository
-            .findBySurvey_IdOrderBySubmittedAtDesc(
-                    surveyId
-            )
-            .stream()
-            .filter(response ->
-                    matchesResponseFilter(
-                            response,
-                            request
+    return findPage(surveyId, request, query, page);
+  }
+
+  private PagedResponse<ResponseListResponse> findPage(
+          UUID surveyId,
+          ResponseFilterRequest filter,
+          String query,
+          int page
+  ) {
+    if (page < 1) throw new BadRequestException("page phai bat dau tu 1");
+    org.springframework.data.domain.Page<ResponseListResponse> result = responseRepository.findAll(
+            responseSpecification(surveyId, filter, query),
+            PageRequest.of(
+                    page - 1,
+                    PAGE_SIZE,
+                    Sort.by(
+                            Sort.Order.desc("submittedAt"),
+                            Sort.Order.desc("id")
                     )
             )
-            .map(this::toListResponse)
-            .toList();
+    ).map(this::toListResponse);
+    return PagedResponse.from(result);
+  }
+
+  private Specification<Response> responseSpecification(
+          UUID surveyId,
+          ResponseFilterRequest filter,
+          String queryText
+  ) {
+    return (root, query, builder) -> {
+      List<Predicate> predicates = new ArrayList<>();
+      predicates.add(builder.equal(root.get("survey").get("id"), surveyId));
+
+      if (filter != null) {
+        if (filter.getFrom() != null) {
+          predicates.add(builder.greaterThanOrEqualTo(
+                  root.get("submittedAt"),
+                  filter.getFrom().toInstant(ZoneOffset.UTC)
+          ));
+        }
+        if (filter.getTo() != null) {
+          predicates.add(builder.lessThanOrEqualTo(
+                  root.get("submittedAt"),
+                  filter.getTo().toInstant(ZoneOffset.UTC)
+          ));
+        }
+        if (filter.getQuestionId() != null) {
+          predicates.add(answerFilterPredicate(root, query, builder, filter));
+        }
+      }
+
+      String search = normalize(queryText);
+      if (search != null) {
+        String pattern = "%" + search + "%";
+        Subquery<Integer> answerSearch = query.subquery(Integer.class);
+        Root<Answer> answer = answerSearch.from(Answer.class);
+        answerSearch.select(builder.literal(1));
+        answerSearch.where(
+                builder.equal(answer.get("response"), root),
+                builder.or(
+                        contains(builder, answer.get("answerText"), pattern),
+                        contains(builder, asString(answer.get("answerNumber")), pattern),
+                        contains(builder, asString(answer.get("answerDate")), pattern),
+                        contains(builder, answer.get("province"), pattern),
+                        contains(builder, answer.get("ward"), pattern),
+                        contains(builder, answer.get("addressDetail"), pattern)
+                )
+        );
+        predicates.add(builder.or(
+                contains(builder, asString(root.get("requestId")), pattern),
+                builder.exists(answerSearch)
+        ));
+      }
+
+      return builder.and(predicates.toArray(Predicate[]::new));
+    };
+  }
+
+  private Predicate answerFilterPredicate(
+          Root<Response> response,
+          jakarta.persistence.criteria.CriteriaQuery<?> query,
+          jakarta.persistence.criteria.CriteriaBuilder builder,
+          ResponseFilterRequest filter
+  ) {
+    Subquery<Integer> answerFilter = query.subquery(Integer.class);
+    Root<Answer> answer = answerFilter.from(Answer.class);
+    List<Predicate> predicates = new ArrayList<>();
+    predicates.add(builder.equal(answer.get("response"), response));
+    predicates.add(builder.equal(answer.get("question").get("id"), filter.getQuestionId()));
+
+    if (filter.getOptionId() != null) {
+      Subquery<Integer> optionFilter = answerFilter.subquery(Integer.class);
+      Root<AnswerOption> answerOption = optionFilter.from(AnswerOption.class);
+      optionFilter.select(builder.literal(1));
+      optionFilter.where(
+              builder.equal(answerOption.get("answer"), answer),
+              builder.equal(answerOption.get("option").get("id"), filter.getOptionId())
+      );
+      predicates.add(builder.exists(optionFilter));
+    }
+    String text = normalize(filter.getText());
+    if (text != null) {
+      predicates.add(contains(builder, answer.get("answerText"), "%" + text + "%"));
+    }
+    if (filter.getNumber() != null) {
+      predicates.add(builder.equal(answer.get("answerNumber"), filter.getNumber()));
+    }
+    if (filter.getDate() != null) {
+      predicates.add(builder.equal(
+              builder.function("date", LocalDate.class, answer.get("answerDate")),
+              filter.getDate()
+      ));
+    }
+    String province = normalize(filter.getProvince());
+    if (province != null) {
+      predicates.add(builder.equal(
+              builder.lower(builder.trim(answer.get("province"))),
+              province
+      ));
+    }
+    String ward = normalize(filter.getWard());
+    if (ward != null) {
+      predicates.add(builder.equal(
+              builder.lower(builder.trim(answer.get("ward"))),
+              ward
+      ));
+    }
+
+    answerFilter.select(builder.literal(1));
+    answerFilter.where(predicates.toArray(Predicate[]::new));
+    return builder.exists(answerFilter);
+  }
+
+  private Predicate contains(
+          jakarta.persistence.criteria.CriteriaBuilder builder,
+          jakarta.persistence.criteria.Expression<String> expression,
+          String pattern
+  ) {
+    return builder.like(builder.lower(builder.coalesce(expression, "")), pattern);
+  }
+
+  private jakarta.persistence.criteria.Expression<String> asString(
+          jakarta.persistence.criteria.Expression<?> expression
+  ) {
+    return ((JpaExpression<?>) expression).cast(String.class);
+  }
+
+  private String normalize(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+    return value.trim().toLowerCase(Locale.ROOT);
   }
 
   public ResponseDetailResponse getDetail(
@@ -325,127 +477,6 @@ public class ResponseService {
     );
   }
 
-  private boolean matchesResponseFilter(
-          Response response,
-          ResponseFilterRequest request
-  ) {
-    if (request == null) {
-      return true;
-    }
-
-    if (request.getFrom() != null
-            && response.getSubmittedAt() != null
-            && response.getSubmittedAt()
-            .isBefore(request.getFrom())) {
-      return false;
-    }
-
-    if (request.getTo() != null
-            && response.getSubmittedAt() != null
-            && response.getSubmittedAt()
-            .isAfter(request.getTo())) {
-      return false;
-    }
-
-    if (request.getQuestionId() == null) {
-      return true;
-    }
-
-    return answerRepository
-            .findByResponse_Id(response.getId())
-            .stream()
-            .filter(answer ->
-                    answer.getQuestion() != null
-                            && Objects.equals(
-                            answer.getQuestion().getId(),
-                            request.getQuestionId()
-                    ))
-            .anyMatch(answer ->
-                    matchesAnswerFilter(
-                            answer,
-                            request
-                    )
-            );
-  }
-
-  private boolean matchesAnswerFilter(
-          Answer answer,
-          ResponseFilterRequest request
-  ) {
-    if (request.getOptionId() != null) {
-      boolean matched =
-              answerOptionRepository
-                      .findByAnswer_Id(answer.getId())
-                      .stream()
-                      .anyMatch(answerOption ->
-                              answerOption.getOption() != null
-                                      && Objects.equals(
-                                      answerOption
-                                              .getOption()
-                                              .getId(),
-                                      request.getOptionId()
-                              ));
-
-      if (!matched) {
-        return false;
-      }
-    }
-
-    if (request.getText() != null
-            && !request.getText().isBlank()) {
-      String text =
-              answer.getAnswerText() == null
-                      ? ""
-                      : answer.getAnswerText();
-
-      if (!text.toLowerCase()
-              .contains(
-                      request.getText()
-                              .trim()
-                              .toLowerCase()
-              )) {
-        return false;
-      }
-    }
-
-    if (request.getNumber() != null
-            && !Objects.equals(
-            answer.getAnswerNumber(),
-            request.getNumber()
-    )) {
-      return false;
-    }
-
-    if (request.getDate() != null
-            && (answer.getAnswerDate() == null
-            || !Objects.equals(
-            answer.getAnswerDate().toLocalDate(),
-            request.getDate()
-    ))) {
-      return false;
-    }
-
-    if (request.getProvince() != null
-            && !request.getProvince().isBlank()
-            && !equalsIgnoreCase(
-            answer.getProvince(),
-            request.getProvince()
-    )) {
-      return false;
-    }
-
-    if (request.getWard() != null
-            && !request.getWard().isBlank()
-            && !equalsIgnoreCase(
-            answer.getWard(),
-            request.getWard()
-    )) {
-      return false;
-    }
-
-    return true;
-  }
-
   private boolean isChoice(Answer answer) {
     if (answer == null
             || answer.getQuestion() == null
@@ -466,17 +497,4 @@ public class ResponseService {
             || "MULTIPLE_CHOICE".equalsIgnoreCase(type);
   }
 
-  private boolean equalsIgnoreCase(
-          String left,
-          String right
-  ) {
-    if (left == null || right == null) {
-      return false;
-    }
-
-    return left.trim()
-            .equalsIgnoreCase(
-                    right.trim()
-            );
-  }
 }

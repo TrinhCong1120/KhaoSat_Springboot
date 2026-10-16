@@ -1,6 +1,7 @@
 package com.trinhcong1120.survey_service.entity;
 
 import java.util.UUID;
+import java.time.Instant;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
@@ -30,6 +31,12 @@ public class Page {
   @Column(name = "order_index")
   private Integer orderIndex;
 
+  @Column(name = "open_at")
+  private Instant openAt;
+
+  @Column(name = "close_at")
+  private Instant closeAt;
+
   @JsonIgnore
   @OneToMany(mappedBy = "page", fetch = FetchType.LAZY)
   private List<Question> questions = new ArrayList<>();
@@ -50,6 +57,10 @@ public class Page {
 
   public Integer getOrderIndex() { return orderIndex; }
   public void setOrderIndex(Integer orderIndex) { this.orderIndex = orderIndex; }
+  public Instant getOpenAt() { return openAt; }
+  public void setOpenAt(Instant openAt) { this.openAt = openAt; }
+  public Instant getCloseAt() { return closeAt; }
+  public void setCloseAt(Instant closeAt) { this.closeAt = closeAt; }
 
   public List<Question> getQuestions() { return questions; }
   public void setQuestions(List<Question> questions) { this.questions = questions; }

@@ -6,6 +6,7 @@ import com.trinhcong1120.survey_service.dto.page.*;
 import com.trinhcong1120.survey_service.service.PageService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,6 +23,7 @@ public class PageController {
   }
 
   @GetMapping("/survey/{surveyId}")
+  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all', 'survey_update_all')")
   public ResponseEntity<List<PageResponse>> getBySurvey(
           @PathVariable UUID surveyId
   ) {
@@ -31,6 +33,7 @@ public class PageController {
   }
 
   @PostMapping
+  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
   public ResponseEntity<PageResponse> create(
           @Valid @RequestBody CreatePageRequest request
   ) {
@@ -40,6 +43,7 @@ public class PageController {
   }
 
   @PutMapping("/{id}")
+  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
   public ResponseEntity<PageResponse> update(
           @PathVariable UUID id,
           @Valid @RequestBody UpdatePageRequest request
@@ -50,6 +54,7 @@ public class PageController {
   }
 
   @DeleteMapping("/{id}")
+  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
   public ResponseEntity<Map<String, String>> delete(
           @PathVariable UUID id
   ) {

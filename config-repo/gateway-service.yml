@@ -11,6 +11,9 @@ spring:
               uri: lb://auth-service
               predicates:
                 - Path=/api/Auth/**
+              metadata:
+                connect-timeout: 3000
+                response-timeout: 10000
 
             - id: core-service
               uri: lb://core-service
@@ -25,7 +28,9 @@ spring:
             - id: survey-service
               uri: lb://survey-service
               predicates:
-                - Path=/api/Surveys/**,/api/Pages/**,/api/Responses/**,/api/Dashboard/**,/api/FailedSurveys/**,/api/Questions/**,/api/Reports/**,/api/Conditions/**,/api/Media/**,/api/public/surveys/**
+                - Path=/api/Surveys/**,/api/Pages/**,/api/Responses/**,/api/Dashboard/**,/api/FailedSurveys/**,/api/Questions/**,/api/Reports/**,/api/Conditions/**,/api/Media/**,/api/public/surveys/**,/api/public/site-visits,/api/public/site-visits/**
+              filters:
+                - PreserveHostHeader
 
             - id: survey-media
               uri: http://minio:9000
@@ -40,6 +45,8 @@ spring:
                 - Path=/api/survey-media/**
               filters:
                 - StripPrefix=1
+                - PreserveHostHeader
+                - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin, RETAIN_FIRST
 
             - id: notification-service
               uri: lb://notification-service
@@ -89,9 +96,39 @@ app:
 
     exposed-headers:
       - Authorization
+      - Retry-After
 
     allow-credentials: true
     max-age: 3600
+
+  rate-limit:
+    # Chỉ bật khi Gateway chỉ nhận kết nối từ Nginx đáng tin cậy.
+    trust-proxy-header: ${RATE_LIMIT_TRUST_PROXY_HEADER:false}
+    max-clients: ${RATE_LIMIT_MAX_CLIENTS:20000}
+    global:
+      per-second: 30
+      per-minute: 300
+    login:
+      per-second: 2
+      per-minute: 10
+    submit:
+      per-second: 2
+      per-minute: 10
+    validate:
+      per-second: 3
+      per-minute: 30
+    survey-get:
+      per-second: 5
+      per-minute: 60
+    media-get:
+      per-second: 15
+      per-minute: 120
+    media-put:
+      per-second: 2
+      per-minute: 20
+    other-public:
+      per-second: 10
+      per-minute: 120
 
 server:
   port: 8080
@@ -115,6 +152,8 @@ springdoc:
         url: /swagger/survey/v3/api-docs
 
 management:
+  server:
+    port: 8085
   endpoints:
     web:
       exposure:

@@ -5,6 +5,7 @@ import java.util.UUID;
 import com.trinhcong1120.survey_service.client.CoreUserClient;
 import com.trinhcong1120.survey_service.dto.core.CoreUserResponse;
 import com.trinhcong1120.survey_service.dto.survey.*;
+import com.trinhcong1120.survey_service.dto.common.PagedResponse;
 import com.trinhcong1120.survey_service.exception.BadRequestException;
 import com.trinhcong1120.survey_service.service.SurveyService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,13 +33,22 @@ public class SurveyController {
   }
 
   @GetMapping
+  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all', 'survey_update_all')")
   public ResponseEntity<List<SurveyResponse>> getAll() {
     return ResponseEntity.ok(
             surveyService.getAll()
     );
   }
 
+  @GetMapping("/page")
+  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all', 'survey_update_all')")
+  public ResponseEntity<PagedResponse<SurveyResponse>> getPage(
+          @RequestParam(defaultValue = "1") int page) {
+    return ResponseEntity.ok(surveyService.getPage(page));
+  }
+
   @GetMapping("/{id}")
+  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all', 'survey_update_all')")
   public ResponseEntity<SurveyDetailResponse> getDetail(
           @PathVariable UUID id
   ) {
@@ -77,6 +87,7 @@ public class SurveyController {
   }
 
   @PutMapping("/{id}")
+  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
   public ResponseEntity<SurveyResponse> update(
           @PathVariable UUID id,
           @Valid @RequestBody UpdateSurveyRequest request
@@ -87,6 +98,7 @@ public class SurveyController {
   }
 
   @PutMapping("/{id}/status")
+  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
   public ResponseEntity<SurveyResponse> updateStatus(
           @PathVariable UUID id,
           @Valid @RequestBody UpdateSurveyStatusRequest request
@@ -100,6 +112,7 @@ public class SurveyController {
   }
 
   @DeleteMapping("/{id}")
+  @PreAuthorize("hasAnyAuthority('survey_delete', 'survey_delete_all')")
   public ResponseEntity<Map<String, String>> delete(
           @PathVariable UUID id
   ) {

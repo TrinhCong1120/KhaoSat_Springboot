@@ -5,6 +5,7 @@ import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsWebFilter;
@@ -50,6 +51,7 @@ public class CorsConfig {
   }
 
   @Bean
+  @Order(-100)
   @ConditionalOnProperty(prefix = "app.cors", name = "enabled", havingValue = "true", matchIfMissing = true)
   public CorsWebFilter corsWebFilter() {
 

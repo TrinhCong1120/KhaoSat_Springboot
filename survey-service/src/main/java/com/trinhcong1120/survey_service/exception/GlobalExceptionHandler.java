@@ -1,7 +1,9 @@
 package com.trinhcong1120.survey_service.exception;
 
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -14,6 +16,28 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+  @ExceptionHandler(SurveyApiException.class)
+  public ResponseEntity<Map<String, Object>> handleSurveyApi(SurveyApiException ex) {
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("timestamp", LocalDateTime.now());
+    body.put("status", ex.getStatus().value());
+    body.put("error", ex.getStatus().getReasonPhrase());
+    body.put("code", ex.getCode());
+    body.put("message", ex.getMessage());
+    return ResponseEntity.status(ex.getStatus()).body(body);
+  }
+
+  @ExceptionHandler(DataIntegrityViolationException.class)
+  public ResponseEntity<Map<String, Object>> handleDataIntegrity(DataIntegrityViolationException ex) {
+    for (Throwable cause = ex; cause != null; cause = cause.getCause()) {
+      if (cause instanceof org.hibernate.exception.ConstraintViolationException violation
+          && "uq_surveys_share_code".equals(violation.getConstraintName()))
+        return handleSurveyApi(new SurveyApiException(
+            "SHARE_CODE_TAKEN", HttpStatus.CONFLICT, "shareCode da duoc su dung"));
+    }
+    return handleException(ex);
+  }
 
   @ExceptionHandler(NotFoundException.class)
   public ResponseEntity<Map<String, Object>> handleNotFound(
@@ -69,6 +93,13 @@ public class GlobalExceptionHandler {
             HttpStatus.BAD_REQUEST,
             message
     );
+  }
+
+  @ExceptionHandler(ConstraintViolationException.class)
+  public ResponseEntity<Map<String, Object>> handleConstraintViolation(
+          ConstraintViolationException ex
+  ) {
+    return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
   @ExceptionHandler(ResponseStatusException.class)

@@ -24,17 +24,20 @@ public class PageService {
   private final com.trinhcong1120.survey_service.security.SurveyAccessGuard guard;
   private final SurveyRepository surveyRepository;
   private final MediaFileRepository mediaFileRepository;
+  private final SurveyScheduleService schedule;
 
   public PageService(
           PageRepository pageRepository,
           com.trinhcong1120.survey_service.security.SurveyAccessGuard guard,
           SurveyRepository surveyRepository,
-          MediaFileRepository mediaFileRepository
+          MediaFileRepository mediaFileRepository,
+          SurveyScheduleService schedule
   ) {
     this.pageRepository = pageRepository;
     this.guard = guard;
     this.surveyRepository = surveyRepository;
     this.mediaFileRepository = mediaFileRepository;
+    this.schedule = schedule;
   }
 
   @Transactional(readOnly = true)
@@ -58,7 +61,7 @@ public class PageService {
     guard.edit(request.getSurveyId());
 
     Survey survey = surveyRepository
-            .findById(request.getSurveyId())
+            .findForWrite(request.getSurveyId())
             .orElseThrow(() ->
                     new NotFoundException("Survey không tồn tại"));
 
@@ -68,6 +71,11 @@ public class PageService {
     page.setTitle(request.getTitle());
     page.setDescription(request.getDescription());
     page.setOrderIndex(request.getOrderIndex());
+    schedule.freezeIfExpired(survey, schedule.now());
+    page.setOpenAt(schedule.toInstant(request.getOpenAt()));
+    page.setCloseAt(schedule.toInstant(request.getCloseAt()));
+    schedule.validatePage(survey, page.getOpenAt(), page.getCloseAt());
+    survey.incrementValidationRevision();
 
     return toResponse(pageRepository.save(page));
   }
@@ -78,10 +86,16 @@ public class PageService {
   ) {
     Page page = getEntity(id);
     guard.edit(page.getSurvey().getId());
+    Survey survey = surveyRepository.findForWrite(page.getSurvey().getId()).orElseThrow();
+    schedule.freezeIfExpired(survey, schedule.now());
 
     page.setTitle(request.getTitle());
     page.setDescription(request.getDescription());
     page.setOrderIndex(request.getOrderIndex());
+    if (request.isOpenAtPresent()) page.setOpenAt(schedule.toInstant(request.getOpenAt()));
+    if (request.isCloseAtPresent()) page.setCloseAt(schedule.toInstant(request.getCloseAt()));
+    schedule.validatePage(survey, page.getOpenAt(), page.getCloseAt());
+    survey.incrementValidationRevision();
 
     return toResponse(pageRepository.save(page));
   }
@@ -89,7 +103,19 @@ public class PageService {
   public void delete(UUID id) {
     Page page = getEntity(id);
     guard.edit(page.getSurvey().getId());
+    Survey survey = surveyRepository.findForWrite(page.getSurvey().getId()).orElseThrow();
+    schedule.freezeIfExpired(survey, schedule.now());
+    boolean lastPage = pageRepository.countBySurvey_Id(survey.getId()) == 1;
     pageRepository.delete(page);
+    pageRepository.flush();
+    if (lastPage) {
+      survey.setPublishedAt(null);
+      survey.setManuallyLocked(false);
+      survey.setRequiresUnlock(false);
+    } else {
+      schedule.freezeIfExpired(survey, schedule.now());
+    }
+    survey.incrementValidationRevision();
   }
 
   private PageResponse toResponse(Page page) {
@@ -102,6 +128,8 @@ public class PageService {
     );
 
     response.setMediaFiles(toMediaResponses(page.getId()));
+    response.setOpenAt(schedule.toLocal(page.getOpenAt()));
+    response.setCloseAt(schedule.toLocal(page.getCloseAt()));
     return response;
   }
 

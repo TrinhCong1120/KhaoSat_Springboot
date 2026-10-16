@@ -14,6 +14,9 @@ public class SubmitSurveyRequest {
 
     private String token;
     private UUID requestId;
+    private Long surveyRevision;
+    private UUID sessionId;
+    private Long activeDurationMs;
 
     public SubmitSurveyRequest() {
     }
@@ -45,4 +48,10 @@ public class SubmitSurveyRequest {
     public void setRequestId(UUID requestId) {
         this.requestId = requestId;
     }
+    public Long getSurveyRevision() { return surveyRevision; }
+    public void setSurveyRevision(Long surveyRevision) { this.surveyRevision = surveyRevision; }
+    public UUID getSessionId() { return sessionId; }
+    public void setSessionId(UUID sessionId) { this.sessionId = sessionId; }
+    public Long getActiveDurationMs() { return activeDurationMs; }
+    public void setActiveDurationMs(Long activeDurationMs) { this.activeDurationMs = activeDurationMs; }
 }
