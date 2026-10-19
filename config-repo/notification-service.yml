@@ -22,8 +22,8 @@
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${MAIL_USERNAME:congtrinhotaku2@gmail.com}
-    password: ${MAIL_PASSWORD:ytheyenwzscwrnnj}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
