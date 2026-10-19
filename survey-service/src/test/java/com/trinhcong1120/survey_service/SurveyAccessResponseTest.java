@@ -100,6 +100,7 @@ class SurveyAccessResponseTest {
     UUID newOwnerId = UUID.randomUUID();
     Survey survey = new Survey();
     survey.setCreatorUserId(oldOwnerId);
+    when(guard.userId()).thenReturn(oldOwnerId);
     when(guard.survey(surveyId)).thenReturn(survey);
     ResultSet row = org.mockito.Mockito.mock(ResultSet.class);
     when(row.getString("username")).thenReturn("new-owner");
@@ -141,6 +142,7 @@ class SurveyAccessResponseTest {
     UUID ownerId = UUID.randomUUID();
     Survey survey = new Survey();
     survey.setCreatorUserId(ownerId);
+    when(guard.userId()).thenReturn(ownerId);
     when(guard.survey(surveyId)).thenReturn(survey);
     ResultSet row = org.mockito.Mockito.mock(ResultSet.class);
     when(row.getString("username")).thenReturn("owner");
@@ -162,6 +164,7 @@ class SurveyAccessResponseTest {
     UUID newOwnerId = UUID.randomUUID();
     Survey survey = new Survey();
     survey.setCreatorUserId(oldOwnerId);
+    when(guard.userId()).thenReturn(UUID.randomUUID());
     SurveyAccess existing = new SurveyAccess();
     existing.setCanView(true);
     when(guard.survey(surveyId)).thenReturn(survey);

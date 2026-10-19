@@ -35,14 +35,14 @@ public interface SurveyRepository extends JpaRepository<Survey, UUID> {
 
   @Query("""
       select s from Survey s where s.creatorUserId = :userId
-      or exists (select 1 from SurveyAccess a where a.survey = s and a.userId = :userId)
+      or exists (select 1 from SurveyAccess a where a.survey = s and a.userId = :userId and a.canView = true)
       order by s.createdAt desc
       """)
   List<Survey> findVisibleTo(@Param("userId") UUID userId);
 
   @Query("""
       select s from Survey s where s.creatorUserId = :userId
-      or exists (select 1 from SurveyAccess a where a.survey = s and a.userId = :userId)
+      or exists (select 1 from SurveyAccess a where a.survey = s and a.userId = :userId and a.canView = true)
       """)
   Page<Survey> findVisibleTo(@Param("userId") UUID userId, Pageable pageable);
 

@@ -25,7 +25,7 @@ public class ConditionController {
   }
 
   @GetMapping
-  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all', 'survey_update_all')")
+  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
   public ResponseEntity<List<ConditionResponse>> getAll() {
     return ResponseEntity.ok(
             conditionService.getAll()
@@ -33,7 +33,7 @@ public class ConditionController {
   }
 
   @GetMapping("/survey/{surveyId}")
-  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all', 'survey_update_all')")
+  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
   public ResponseEntity<List<ConditionResponse>> getBySurvey(
           @PathVariable UUID surveyId
   ) {

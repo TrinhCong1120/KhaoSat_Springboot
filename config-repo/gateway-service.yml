@@ -49,9 +49,14 @@ spring:
                 - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin, RETAIN_FIRST
 
             - id: notification-service
-              uri: lb://notification-service
+              uri: lb://core-service
               predicates:
                 - Path=/api/notifications/**
+
+            - id: telegram-webhook
+              uri: lb://notification-service
+              predicates:
+                - Path=/api/telegram/webhook
 
             - id: auth-service-openapi
               uri: lb://auth-service

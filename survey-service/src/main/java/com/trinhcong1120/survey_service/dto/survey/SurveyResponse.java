@@ -15,6 +15,9 @@ public class SurveyResponse {
     private String description;
     private String creatorUser;
     private UUID creatorUserId;
+    private boolean canEdit;
+    private boolean canDelete;
+    private boolean canManageAccess;
     private LocalDateTime createdAt;
     private String status;
     private LocalDateTime openAt;
@@ -73,6 +76,12 @@ public class SurveyResponse {
 
     public UUID getCreatorUserId() { return creatorUserId; }
     public void setCreatorUserId(UUID creatorUserId) { this.creatorUserId = creatorUserId; }
+    public boolean isCanEdit() { return canEdit; }
+    public void setCanEdit(boolean canEdit) { this.canEdit = canEdit; }
+    public boolean isCanDelete() { return canDelete; }
+    public void setCanDelete(boolean canDelete) { this.canDelete = canDelete; }
+    public boolean isCanManageAccess() { return canManageAccess; }
+    public void setCanManageAccess(boolean canManageAccess) { this.canManageAccess = canManageAccess; }
 
     public void setCreatorUser(String creatorUser) {
         this.creatorUser = creatorUser;

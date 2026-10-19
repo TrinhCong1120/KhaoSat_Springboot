@@ -64,7 +64,7 @@ public class MediaController {
   }
 
   @GetMapping
-  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all', 'survey_update_all')")
+  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
   public ResponseEntity<List<MediaUploadResponse>> getByOwner(
           @RequestParam String ownerType,
           @RequestParam UUID ownerId

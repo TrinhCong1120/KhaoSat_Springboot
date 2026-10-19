@@ -3,6 +3,7 @@ package com.trinhcong1120.survey_service;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.trinhcong1120.survey_service.controller.DashboardController;
 import com.trinhcong1120.survey_service.controller.ResponseController;
@@ -16,7 +17,10 @@ import com.trinhcong1120.survey_service.service.StatisticsService;
 import com.trinhcong1120.survey_service.service.SurveyService;
 import com.trinhcong1120.survey_service.service.SurveyDashboardService;
 import com.trinhcong1120.survey_service.security.SurveyAccessGuard;
+import com.trinhcong1120.survey_service.repository.*;
+import com.trinhcong1120.survey_service.service.SurveyScheduleService;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import java.time.Instant;
 import org.junit.jupiter.api.AfterEach;
@@ -107,6 +111,16 @@ class DashboardPermissionTest {
     verify(surveyService).getAll();
     verify(statisticsService).getTraffic(surveyId, from, to, "Asia/Ho_Chi_Minh", "DAY");
     assertThrows(AccessDeniedException.class, () -> dashboard.getDashboard());
+  }
+
+  @Test
+  void dashboardTotalsUseAllSurveysRegardlessOfSurveyAccess() {
+    SurveyRepository repository = mock(SurveyRepository.class);
+    when(repository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of());
+    new DashboardService(repository, mock(PageRepository.class), mock(QuestionRepository.class),
+        mock(com.trinhcong1120.survey_service.repository.ResponseRepository.class),
+        mock(AnswerRepository.class), mock(SurveyScheduleService.class)).getDashboard();
+    verify(repository).findAllByOrderByCreatedAtDesc();
   }
 
   private void authenticate(String... permissions) {

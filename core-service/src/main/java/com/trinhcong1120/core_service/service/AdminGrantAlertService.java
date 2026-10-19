@@ -49,12 +49,18 @@ public class AdminGrantAlertService {
                 + ") đã được cấp role Admin.\nNgười thực hiện: " + actor.getUsername()
                 + " (" + actor.getId() + ").\nThời điểm: " + VIETNAM_TIME.format(Instant.now()) + ".";
         List<NotificationEvent> events = new ArrayList<>();
-        uniqueEmails.values().forEach(email -> events.add(new NotificationEvent(
-                "ADMIN_ROLE_GRANTED", email, target.getUsername(),
-                "Cảnh báo: cấp quyền Admin", message, target.getId())));
-        uniqueChatIds.forEach(chatId -> events.add(new NotificationEvent(
-                "ADMIN_ROLE_GRANTED", null, target.getUsername(),
-                "Cảnh báo: cấp quyền Admin", message, target.getId(), chatId)));
+        uniqueEmails.values().forEach(email -> {
+            NotificationEvent event = new NotificationEvent("ADMIN_ROLE_GRANTED", email,
+                    target.getUsername(), "Cảnh báo: cấp quyền Admin", message, target.getId());
+            event.setActorId(actorId);
+            events.add(event);
+        });
+        uniqueChatIds.forEach(chatId -> {
+            NotificationEvent event = new NotificationEvent("ADMIN_ROLE_GRANTED", null,
+                    target.getUsername(), "Cảnh báo: cấp quyền Admin", message, target.getId(), chatId);
+            event.setActorId(actorId);
+            events.add(event);
+        });
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override

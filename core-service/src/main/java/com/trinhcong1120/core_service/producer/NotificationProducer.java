@@ -3,6 +3,7 @@ package com.trinhcong1120.core_service.producer;
 import com.trinhcong1120.core_service.dto.event.NotificationEvent;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import java.util.UUID;
 
 @Service
 public class NotificationProducer {
@@ -19,6 +20,7 @@ public class NotificationProducer {
     }
 
     public void send(NotificationEvent event) {
+        if (event.getEventId() == null) event.setEventId(UUID.randomUUID());
 
         kafkaTemplate.send(
                 TOPIC,

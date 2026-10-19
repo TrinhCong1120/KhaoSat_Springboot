@@ -33,7 +33,7 @@ public class SurveyController {
   }
 
   @GetMapping
-  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all', 'survey_update_all')")
+  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
   public ResponseEntity<List<SurveyResponse>> getAll() {
     return ResponseEntity.ok(
             surveyService.getAll()
@@ -41,14 +41,14 @@ public class SurveyController {
   }
 
   @GetMapping("/page")
-  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all', 'survey_update_all')")
+  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
   public ResponseEntity<PagedResponse<SurveyResponse>> getPage(
           @RequestParam(defaultValue = "1") int page) {
     return ResponseEntity.ok(surveyService.getPage(page));
   }
 
   @GetMapping("/{id}")
-  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all', 'survey_update_all')")
+  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
   public ResponseEntity<SurveyDetailResponse> getDetail(
           @PathVariable UUID id
   ) {

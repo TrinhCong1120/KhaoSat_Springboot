@@ -17,6 +17,9 @@ public class NotificationEvent {
     private UUID referenceId;
 
     private Long telegramChatId;
+    private UUID actorId;
+    private UUID recipientId;
+    private UUID eventId;
 
     public NotificationEvent() {
     }
@@ -105,4 +108,11 @@ public class NotificationEvent {
     public void setTelegramChatId(Long telegramChatId) {
         this.telegramChatId = telegramChatId;
     }
+
+    public UUID getActorId() { return actorId; }
+    public void setActorId(UUID actorId) { this.actorId = actorId; }
+    public UUID getRecipientId() { return recipientId; }
+    public void setRecipientId(UUID recipientId) { this.recipientId = recipientId; }
+    public UUID getEventId() { return eventId; }
+    public void setEventId(UUID eventId) { this.eventId = eventId; }
 }

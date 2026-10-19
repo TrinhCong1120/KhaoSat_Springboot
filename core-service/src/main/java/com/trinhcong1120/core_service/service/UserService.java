@@ -194,14 +194,14 @@ public class UserService {
         }
 
         if (savedUser.getTelegramChatId() != null) {
-            publishTelegramLinked(savedUser);
+            publishTelegramLinked(savedUser, actorId);
         }
 
         // =========================
         // GỬI KAFKA EVENT
         // =========================
 
-        publishUserNotification(savedUser, "USER_CREATED",
+        publishUserNotification(savedUser, actorId, "USER_CREATED",
                 "Tài khoản đã được tạo",
                 "Xin chào " + savedUser.getUsername()
                         + ", tài khoản của bạn đã được tạo thành công.");
@@ -321,12 +321,12 @@ public class UserService {
 
         if (savedUser.getTelegramChatId() != null
                 && !savedUser.getTelegramChatId().equals(oldTelegramChatId)) {
-            publishTelegramLinked(savedUser);
+            publishTelegramLinked(savedUser, actorId);
         }
 
         Set<String> newRoles = roleNames(savedUser);
         if (!oldRoles.equals(newRoles) && savedUser.getTelegramChatId() != null) {
-            publishRoleChanges(savedUser, oldRoles, newRoles);
+            publishRoleChanges(savedUser, actorId, oldRoles, newRoles);
         }
 
         // =========================
@@ -347,7 +347,7 @@ public class UserService {
          * đã bị khóa từ trước.
          */
         if (wasActive && isNowInactive) {
-            publishUserNotification(savedUser, "USER_DEACTIVATED",
+            publishUserNotification(savedUser, actorId, "USER_DEACTIVATED",
                     "Tài khoản đã bị khóa",
                     "Xin chào " + savedUser.getUsername()
                             + ", tài khoản của bạn đã bị khóa.");
@@ -432,15 +432,21 @@ public class UserService {
         }
     }
 
-    private void publishUserNotification(User user, String type, String subject, String message) {
+    private void publishUserNotification(User user, UUID actorId, String type, String subject, String message) {
         List<NotificationEvent> events = new java.util.ArrayList<>();
         if (user.getEmail() != null && !user.getEmail().isBlank()) {
-            events.add(new NotificationEvent(type, user.getEmail().trim(), user.getUsername(),
-                    subject, message, user.getId()));
+            NotificationEvent event = new NotificationEvent(type, user.getEmail().trim(), user.getUsername(),
+                    subject, message, user.getId());
+            event.setActorId(actorId);
+            event.setRecipientId(user.getId());
+            events.add(event);
         }
         if (user.getTelegramChatId() != null) {
-            events.add(new NotificationEvent(type, null, user.getUsername(), subject, message,
-                    user.getId(), user.getTelegramChatId()));
+            NotificationEvent event = new NotificationEvent(type, null, user.getUsername(), subject, message,
+                    user.getId(), user.getTelegramChatId());
+            event.setActorId(actorId);
+            event.setRecipientId(user.getId());
+            events.add(event);
         }
         if (events.isEmpty()) {
             return;
@@ -457,16 +463,16 @@ public class UserService {
         });
     }
 
-    private void publishTelegramLinked(User user) {
+    private void publishTelegramLinked(User user, UUID actorId) {
         String email = maskEmail(user.getEmail());
-        publishTelegramNotification(user, "TELEGRAM_ACCOUNT_LINKED",
+        publishTelegramNotification(user, actorId, "TELEGRAM_ACCOUNT_LINKED",
                 "Liên kết Telegram thành công",
                 "Tài khoản của bạn vừa được liên kết với Telegram.\n"
                         + "Tên đăng nhập: " + user.getUsername() + "\n"
                         + "Email: " + (email == null ? "Chưa có email" : email));
     }
 
-    private void publishRoleChanges(User user, Set<String> oldRoles, Set<String> newRoles) {
+    private void publishRoleChanges(User user, UUID actorId, Set<String> oldRoles, Set<String> newRoles) {
         Set<String> added = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         added.addAll(newRoles);
         added.removeAll(oldRoles);
@@ -482,13 +488,15 @@ public class UserService {
         if (!removed.isEmpty()) {
             message.append("\nQuyền bị gỡ: ").append(String.join(", ", removed));
         }
-        publishTelegramNotification(user, "USER_ROLES_CHANGED",
+        publishTelegramNotification(user, actorId, "USER_ROLES_CHANGED",
                 "Quyền tài khoản đã thay đổi", message.toString());
     }
 
-    private void publishTelegramNotification(User user, String type, String subject, String message) {
+    private void publishTelegramNotification(User user, UUID actorId, String type, String subject, String message) {
         NotificationEvent event = new NotificationEvent(type, null, user.getUsername(), subject,
                 message, user.getId(), user.getTelegramChatId());
+        event.setActorId(actorId);
+        event.setRecipientId(user.getId());
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             notificationProducer.send(event);
             return;

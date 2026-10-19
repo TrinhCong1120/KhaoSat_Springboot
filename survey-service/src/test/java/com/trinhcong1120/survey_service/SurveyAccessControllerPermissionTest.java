@@ -41,12 +41,13 @@ class SurveyAccessControllerPermissionTest {
   void tearDown() { SecurityContextHolder.clearContext(); }
 
   @Test
-  void onlyOwnerOrGlobalManagerCanManageAccess() {
+  void controllerUsesSurveyAccessPolicy() {
     UUID surveyId = UUID.randomUUID();
     authenticate();
     assertThrows(AccessDeniedException.class, () -> controller.list(surveyId));
 
-    when(guard.owns(surveyId)).thenReturn(true);
+    when(guard.canManageAccess(surveyId)).thenReturn(true);
+    authenticate("survey_update");
     controller.list(surveyId);
     verify(service).list(surveyId);
 

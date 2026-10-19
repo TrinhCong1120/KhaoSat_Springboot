@@ -47,7 +47,7 @@ class SurveyAccessGuardTest {
 
   @Test
   void editorAccessAllowsViewAndEditButNotSurveyDeletion() {
-    authenticate(editorId);
+    authenticate(editorId, "survey_view", "survey_update", "survey_delete");
     assertDoesNotThrow(() -> guard.view(surveyId));
     assertDoesNotThrow(() -> guard.edit(surveyId));
     assertThrows(AccessDeniedException.class, () -> guard.delete(surveyId));
@@ -57,7 +57,7 @@ class SurveyAccessGuardTest {
 
   @Test
   void ownerPassesObjectChecks() {
-    authenticate(ownerId);
+    authenticate(ownerId, "survey_view", "survey_update", "survey_delete");
     assertDoesNotThrow(() -> guard.view(surveyId));
     assertDoesNotThrow(() -> guard.edit(surveyId));
     assertDoesNotThrow(() -> guard.delete(surveyId));
@@ -67,7 +67,7 @@ class SurveyAccessGuardTest {
   @Test
   void globalDeleteNeedsItsOwnPermission() {
     authenticate(editorId, "survey_update_all");
-    assertDoesNotThrow(() -> guard.view(surveyId));
+    assertThrows(AccessDeniedException.class, () -> guard.view(surveyId));
     assertDoesNotThrow(() -> guard.edit(surveyId));
     assertDoesNotThrow(() -> guard.manageAccess(surveyId));
     assertThrows(AccessDeniedException.class, () -> guard.delete(surveyId));
@@ -77,6 +77,65 @@ class SurveyAccessGuardTest {
 
     authenticate(editorId, "survey_delete_all");
     assertDoesNotThrow(() -> guard.delete(surveyId));
+  }
+
+  @Test
+  void accessOrOwnershipWithoutPermissionIsDenied() {
+    authenticate(editorId);
+    assertThrows(AccessDeniedException.class, () -> guard.view(surveyId));
+    assertThrows(AccessDeniedException.class, () -> guard.edit(surveyId));
+    authenticate(ownerId);
+    assertFalse(guard.canManageAccess(surveyId));
+    assertThrows(AccessDeniedException.class, () -> guard.view(surveyId));
+    assertThrows(AccessDeniedException.class, () -> guard.edit(surveyId));
+    assertThrows(AccessDeniedException.class, () -> guard.delete(surveyId));
+    assertThrows(AccessDeniedException.class, () -> guard.manageAccess(surveyId));
+  }
+
+  @Test
+  void permissionWithoutMatchingAccessIsDenied() {
+    authenticate(UUID.randomUUID(), "survey_view", "survey_update", "survey_delete");
+    assertThrows(AccessDeniedException.class, () -> guard.view(surveyId));
+    assertThrows(AccessDeniedException.class, () -> guard.edit(surveyId));
+    assertThrows(AccessDeniedException.class, () -> guard.delete(surveyId));
+    assertThrows(AccessDeniedException.class, () -> guard.manageAccess(surveyId));
+  }
+
+  @Test
+  void viewerAccessNeverGrantsEdit() {
+    SurveyAccess viewOnly = new SurveyAccess();
+    viewOnly.setCanView(true);
+    when(accesses.findBySurvey_IdAndUserId(surveyId, editorId)).thenReturn(Optional.of(viewOnly));
+    authenticate(editorId, "survey_view", "survey_update");
+    assertDoesNotThrow(() -> guard.view(surveyId));
+    assertThrows(AccessDeniedException.class, () -> guard.edit(surveyId));
+  }
+
+  @Test
+  void visibleListRequiresViewPermission() {
+    authenticate(editorId);
+    assertEquals(0, guard.visibleSurveys().size());
+    verify(surveys, never()).findVisibleTo(editorId);
+    authenticate(editorId, "survey_view");
+    guard.visibleSurveys();
+    verify(surveys).findVisibleTo(editorId);
+    authenticate(editorId, "survey_view_all");
+    guard.visibleSurveys();
+    verify(surveys).findAllByOrderByCreatedAtDesc();
+  }
+
+  @Test
+  void responseActionsUseTheSamePermissionAndAccessRules() {
+    Survey survey = guard.survey(surveyId);
+    authenticate(editorId, "survey_view", "survey_update", "survey_delete");
+    assertEquals(new SurveyAccessGuard.Actions(true, false, false), guard.actions(survey));
+    authenticate(ownerId, "survey_view");
+    assertEquals(new SurveyAccessGuard.Actions(false, false, false), guard.actions(survey));
+    authenticate(ownerId, "survey_update", "survey_delete");
+    assertTrue(guard.canManageAccess(surveyId));
+    assertEquals(new SurveyAccessGuard.Actions(true, true, true), guard.actions(survey));
+    authenticate(UUID.randomUUID(), "survey_update_all", "survey_delete_all");
+    assertEquals(new SurveyAccessGuard.Actions(true, true, true), guard.actions(survey));
   }
 
   @Test

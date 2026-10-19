@@ -61,45 +61,59 @@ public class SurveyAccessGuard {
     return surveys.findById(id).orElseThrow(() -> new NotFoundException("Survey khong ton tai"));
   }
 
-  public boolean owns(UUID id) {
-    return isOwner(survey(id));
+  public boolean canManageAccess(UUID id) {
+    return canManageAccess(survey(id));
+  }
+
+  public record Actions(boolean canEdit, boolean canDelete, boolean canManageAccess) {}
+
+  public Actions actions(Survey survey) {
+    boolean owner = isOwner(survey);
+    boolean edit = has("survey_update_all");
+    boolean delete = has("survey_delete_all");
+    if (edit && delete) return new Actions(true, true, true);
+    boolean canEdit = has("survey_update") && (owner || access(survey).map(SurveyAccess::isCanEdit).orElse(false));
+    return new Actions(edit || canEdit, delete || (has("survey_delete") && owner),
+        edit || (has("survey_update") && owner));
   }
 
   public void view(UUID id) {
     Survey survey = survey(id);
-    if (has("survey_view_all") || has("survey_update_all")) return;
-    if (isOwner(survey) || access(survey).map(SurveyAccess::isCanView).orElse(false)) return;
+    if (has("survey_view_all")) return;
+    if (has("survey_view") && (isOwner(survey) || access(survey).map(SurveyAccess::isCanView).orElse(false))) return;
     throw new AccessDeniedException("Khong co quyen xem survey");
   }
 
   public void edit(UUID id) {
     Survey survey = survey(id);
     if (has("survey_update_all")) return;
-    if (isOwner(survey) || access(survey).map(SurveyAccess::isCanEdit).orElse(false)) return;
+    if (has("survey_update") && (isOwner(survey) || access(survey).map(SurveyAccess::isCanEdit).orElse(false))) return;
     throw new AccessDeniedException("Khong co quyen sua survey");
   }
 
   public void delete(UUID id) {
     Survey survey = survey(id);
-    if (has("survey_delete_all") || isOwner(survey)) return;
+    if (has("survey_delete_all") || (has("survey_delete") && isOwner(survey))) return;
     throw new AccessDeniedException("Khong co quyen xoa survey");
   }
 
   public void manageAccess(UUID id) {
     Survey survey = survey(id);
-    if (has("survey_update_all") || isOwner(survey)) return;
+    if (canManageAccess(survey)) return;
     throw new AccessDeniedException("Khong co quyen quan ly access");
   }
 
   public List<Survey> visibleSurveys() {
-    if (has("survey_view_all") || has("survey_update_all"))
+    if (has("survey_view_all"))
       return surveys.findAllByOrderByCreatedAtDesc();
+    if (!has("survey_view")) return List.of();
     return surveys.findVisibleTo(userId());
   }
 
   public Page<Survey> visibleSurveys(Pageable pageable) {
-    if (has("survey_view_all") || has("survey_update_all"))
+    if (has("survey_view_all"))
       return surveys.findAll(pageable);
+    if (!has("survey_view")) return Page.empty(pageable);
     return surveys.findVisibleTo(userId(), pageable);
   }
 
@@ -162,6 +176,10 @@ public class SurveyAccessGuard {
 
   private boolean isOwner(Survey survey) {
     return userId().equals(survey.getCreatorUserId());
+  }
+
+  private boolean canManageAccess(Survey survey) {
+    return has("survey_update_all") || (has("survey_update") && isOwner(survey));
   }
 
   private java.util.Optional<SurveyAccess> access(Survey survey) {

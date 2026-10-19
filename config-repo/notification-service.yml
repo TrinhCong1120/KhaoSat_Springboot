@@ -1,6 +1,14 @@
 ﻿spring:
   application:
     name: notification-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  task:
+    scheduling:
+      pool:
+        size: 2
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
@@ -30,12 +38,32 @@
           auth: true
           starttls:
             enable: true
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
   telegram:
     bot:
       token: ${TELEGRAM_BOT_TOKEN:}
+      webhook-url: ${TELEGRAM_WEBHOOK_URL:}
+      webhook-secret: ${TELEGRAM_WEBHOOK_SECRET:}
 
 server:
   port: 8083
+
+notification:
+  inbox:
+    max-attachment-bytes: ${NOTIFICATION_ATTACHMENT_MAX_BYTES:20971520}
+    bucket: ${NOTIFICATION_ATTACHMENT_BUCKET:notification-attachments}
+  bounce:
+    enabled: ${NOTIFICATION_BOUNCE_ENABLED:true}
+    host: ${NOTIFICATION_BOUNCE_HOST:imap.gmail.com}
+    port: ${NOTIFICATION_BOUNCE_PORT:993}
+    folder: ${NOTIFICATION_BOUNCE_FOLDER:INBOX}
+    poll-delay-ms: ${NOTIFICATION_BOUNCE_POLL_DELAY_MS:60000}
+  retry:
+    max-attempts: ${NOTIFICATION_MAX_ATTEMPTS:3}
+    delay-1: ${NOTIFICATION_RETRY_DELAY_1:PT1M}
+    delay-2: ${NOTIFICATION_RETRY_DELAY_2:PT5M}
 
 eureka:
   client:

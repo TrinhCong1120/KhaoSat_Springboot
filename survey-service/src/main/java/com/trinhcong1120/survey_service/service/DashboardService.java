@@ -17,7 +17,6 @@ import java.util.*;
 public class DashboardService {
 
   private final SurveyRepository surveyRepository;
-  private final com.trinhcong1120.survey_service.security.SurveyAccessGuard guard;
   private final PageRepository pageRepository;
   private final QuestionRepository questionRepository;
   private final ResponseRepository responseRepository;
@@ -26,7 +25,6 @@ public class DashboardService {
 
   public DashboardService(
           SurveyRepository surveyRepository,
-          com.trinhcong1120.survey_service.security.SurveyAccessGuard guard,
           PageRepository pageRepository,
           QuestionRepository questionRepository,
           ResponseRepository responseRepository,
@@ -34,7 +32,6 @@ public class DashboardService {
           SurveyScheduleService schedule
   ) {
     this.surveyRepository = surveyRepository;
-    this.guard = guard;
     this.pageRepository = pageRepository;
     this.questionRepository = questionRepository;
     this.responseRepository = responseRepository;
@@ -48,7 +45,7 @@ public class DashboardService {
             LocalDateTime.now();
 
     List<Survey> surveys =
-            guard.visibleSurveys();
+            surveyRepository.findAllByOrderByCreatedAtDesc();
 
     List<UUID> visibleIds = surveys.stream().map(Survey::getId).toList();
 

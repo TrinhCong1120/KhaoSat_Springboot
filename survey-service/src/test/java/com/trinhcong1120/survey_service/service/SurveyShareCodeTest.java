@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 
 class SurveyShareCodeTest {
   private final SurveyRepository surveys = mock(SurveyRepository.class);
@@ -40,6 +41,12 @@ class SurveyShareCodeTest {
       conditions, mock(ResponseRepository.class),
       mock(AnswerRepository.class), mock(AnswerOptionRepository.class),
       media, rules, schedule, alerts);
+
+  @BeforeEach
+  void stubActions() {
+    when(guard.actions(any(Survey.class)))
+        .thenReturn(new SurveyAccessGuard.Actions(false, false, false));
+  }
 
   @Test
   void deletingSomeoneElsesSurveyWithGlobalPermissionAlertsAfterDelete() {
@@ -107,8 +114,8 @@ class SurveyShareCodeTest {
       survey.setId(UUID.randomUUID());
       return survey;
     });
-    assertTrue(service.create(new CreateSurveyRequest("Survey", null), "editor")
-        .getShareCode().matches("[a-z0-9]{8}"));
+    var response = service.create(new CreateSurveyRequest("Survey", null), "editor");
+    assertTrue(response.getShareCode().matches("[a-z0-9]{8}"));
   }
 
   @Test

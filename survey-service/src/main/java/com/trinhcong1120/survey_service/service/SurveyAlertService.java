@@ -40,7 +40,7 @@ public class SurveyAlertService {
         + ".\nChủ sở hữu trước khi xóa: " + display(owner, survey.getCreatorUserId())
         + ".\nThời điểm: " + VIETNAM_TIME.format(Instant.now()) + ".";
     publishAfterCommit("SURVEY_DELETED_BY_ADMIN", "Cảnh báo: xóa khảo sát của người khác",
-        message, survey.getId(), owner);
+        message, survey.getId(), actorId, owner);
   }
 
   public void ownerChangedByGlobalUser(Survey survey, UUID actorId, UUID oldOwnerId,
@@ -54,10 +54,11 @@ public class SurveyAlertService {
         + ".\nChủ mới: " + display(newOwner, newOwnerId)
         + ".\nThời điểm: " + VIETNAM_TIME.format(Instant.now()) + ".";
     publishAfterCommit("SURVEY_OWNER_CHANGED_BY_ADMIN", "Cảnh báo: chuyển chủ khảo sát",
-        message, survey.getId(), oldOwner, newOwner);
+        message, survey.getId(), actorId, oldOwner, newOwner);
   }
 
   private void publishAfterCommit(String type, String subject, String message, UUID surveyId,
+      UUID actorId,
       UserInfo... owners) {
     List<UserInfo> recipients = new ArrayList<>(jdbc.query(
         "SELECT DISTINCT u.username, u.email, u.telegram_chat_id FROM users u "
@@ -83,9 +84,9 @@ public class SurveyAlertService {
     }
     List<NotificationEvent> events = new ArrayList<>();
     uniqueEmails.values().forEach(email -> events.add(
-        new NotificationEvent(type, email, null, subject, message, surveyId)));
+        new NotificationEvent(type, email, null, subject, message, surveyId, null, actorId, null)));
     uniqueChatIds.forEach(chatId -> events.add(
-        new NotificationEvent(type, null, null, subject, message, surveyId, chatId)));
+        new NotificationEvent(type, null, null, subject, message, surveyId, chatId, actorId, null)));
     TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
       @Override
       public void afterCommit() {

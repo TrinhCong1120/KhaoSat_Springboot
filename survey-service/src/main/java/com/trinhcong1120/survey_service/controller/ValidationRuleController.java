@@ -35,7 +35,7 @@ public class ValidationRuleController {
   }
 
   @GetMapping("/api/ValidationRules/catalog")
-  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all', 'survey_update_all')")
+  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
   public ResponseEntity<ValidationRuleCatalogResponse> catalog(
           @RequestParam(required = false) String questionType
   ) {
@@ -45,7 +45,7 @@ public class ValidationRuleController {
   }
 
   @GetMapping("/api/Questions/{id}/validation-rules")
-  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all', 'survey_update_all')")
+  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
   public ResponseEntity<List<QuestionValidationRuleResponse>> getRules(
           @PathVariable UUID id
   ) {

@@ -121,6 +121,10 @@ public class SurveyService {
     response.setDescription(survey.getDescription());
     response.setCreatorUser(survey.getCreatorUser());
     response.setCreatorUserId(survey.getCreatorUserId());
+    var actions = guard.actions(survey);
+    response.setCanEdit(actions.canEdit());
+    response.setCanDelete(actions.canDelete());
+    response.setCanManageAccess(actions.canManageAccess());
     response.setCreatedAt(survey.getCreatedAt());
     response.setStatus(schedule.status(survey).name());
     response.setOpenAt(schedule.toLocal(survey.getOpenAt()));
@@ -384,6 +388,10 @@ public class SurveyService {
 
     response.setMediaFiles(toMediaResponses("SURVEY", survey.getId()));
     response.setCreatorUserId(survey.getCreatorUserId());
+    var actions = guard.actions(survey);
+    response.setCanEdit(actions.canEdit());
+    response.setCanDelete(actions.canDelete());
+    response.setCanManageAccess(actions.canManageAccess());
     response.setShareCode(survey.getShareCode());
     response.setOpenAt(schedule.toLocal(survey.getOpenAt()));
     response.setCloseAt(schedule.toLocal(survey.getCloseAt()));

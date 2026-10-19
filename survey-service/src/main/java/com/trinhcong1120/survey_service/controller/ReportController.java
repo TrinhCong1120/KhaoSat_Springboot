@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/Reports")
-@PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all', 'survey_update_all')")
+@PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
 public class ReportController {
 
   private static final MediaType XLSX =

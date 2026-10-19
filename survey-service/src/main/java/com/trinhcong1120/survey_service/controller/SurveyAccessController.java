@@ -18,27 +18,27 @@ public class SurveyAccessController {
   public SurveyAccessController(SurveyAccessService service) { this.service = service; }
 
   @GetMapping("/access")
-  @PreAuthorize("hasAuthority('survey_update_all') or @surveyAccessGuard.owns(#surveyId)")
+  @PreAuthorize("@surveyAccessGuard.canManageAccess(#surveyId)")
   public ResponseEntity<List<AccessResponse>> list(@PathVariable UUID surveyId) {
     return ResponseEntity.ok(service.list(surveyId));
   }
 
   @PutMapping("/access/{userId}")
-  @PreAuthorize("hasAuthority('survey_update_all') or @surveyAccessGuard.owns(#surveyId)")
+  @PreAuthorize("@surveyAccessGuard.canManageAccess(#surveyId)")
   public ResponseEntity<AccessResponse> put(@PathVariable UUID surveyId, @PathVariable UUID userId,
       @RequestBody AccessRequest request) {
     return ResponseEntity.ok(service.put(surveyId, userId, request));
   }
 
   @DeleteMapping("/access/{userId}")
-  @PreAuthorize("hasAuthority('survey_update_all') or @surveyAccessGuard.owns(#surveyId)")
+  @PreAuthorize("@surveyAccessGuard.canManageAccess(#surveyId)")
   public ResponseEntity<Void> remove(@PathVariable UUID surveyId, @PathVariable UUID userId) {
     service.remove(surveyId, userId);
     return ResponseEntity.noContent().build();
   }
 
   @PutMapping("/owner")
-  @PreAuthorize("hasAuthority('survey_update_all') or @surveyAccessGuard.owns(#surveyId)")
+  @PreAuthorize("@surveyAccessGuard.canManageAccess(#surveyId)")
   public ResponseEntity<Void> changeOwner(@PathVariable UUID surveyId, @RequestBody OwnerRequest request) {
     service.changeOwner(surveyId, request);
     return ResponseEntity.noContent().build();

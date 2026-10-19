@@ -23,7 +23,7 @@ public class PageController {
   }
 
   @GetMapping("/survey/{surveyId}")
-  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all', 'survey_update_all')")
+  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
   public ResponseEntity<List<PageResponse>> getBySurvey(
           @PathVariable UUID surveyId
   ) {

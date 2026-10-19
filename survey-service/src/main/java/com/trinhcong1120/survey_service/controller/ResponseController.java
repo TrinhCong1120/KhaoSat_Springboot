@@ -16,7 +16,7 @@ import jakarta.validation.constraints.Min;
 
 @RestController
 @RequestMapping("/api/Responses")
-@PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all', 'survey_update_all')")
+@PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
 @Validated
 public class ResponseController {
 
