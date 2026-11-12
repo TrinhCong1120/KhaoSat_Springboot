@@ -76,25 +76,18 @@ class DashboardPermissionTest {
   @AfterEach void clearAuthentication() { SecurityContextHolder.clearContext(); }
 
   @Test
-  void dashboardPermissionDoesNotGrantSurveyResults() {
-    UUID surveyId = UUID.randomUUID();
+  void dashboardRequiresDashboardViewOrSurveyView() {
+    authenticate("survey_submit");
+    assertThrows(AccessDeniedException.class, () -> dashboard.getDashboard());
     authenticate("dashboard_view");
     dashboard.getDashboard();
     verify(dashboardService).getDashboard();
-    assertThrows(AccessDeniedException.class, () -> responses.getBySurvey(surveyId, 1, null));
-    assertThrows(AccessDeniedException.class, () -> reports.getStatistics(surveyId));
-    assertThrows(AccessDeniedException.class, () -> reports.getResponseTimeline(surveyId));
-    assertThrows(AccessDeniedException.class, () -> reports.getDashboard(surveyId, null, null, "AUTO"));
-    assertThrows(AccessDeniedException.class, () -> surveys.getAll());
-    assertThrows(AccessDeniedException.class, () -> reports.getTraffic(surveyId,
-        Instant.parse("2026-10-01T00:00:00Z"), Instant.parse("2026-10-02T00:00:00Z"),
-        "Asia/Ho_Chi_Minh", "DAY"));
   }
 
   @Test
-  void surveyViewGrantsResultsButNotDashboard() {
+  void surveyEndpointsReachObjectLevelChecksWithoutJwtSurveyRole() {
     UUID surveyId = UUID.randomUUID();
-    authenticate("survey_view");
+    authenticate();
     responses.getBySurvey(surveyId, 1, null);
     reports.getStatistics(surveyId);
     reports.getResponseTimeline(surveyId);
@@ -106,7 +99,7 @@ class DashboardPermissionTest {
     verify(responseService).getBySurvey(surveyId, 1, null);
     verify(statisticsService).getStatistics(surveyId);
     verify(statisticsService).getResponseTimeline(surveyId);
-    verify(accessGuard).view(surveyId);
+    verify(accessGuard).viewResponses(surveyId);
     verify(surveyDashboardService).report(surveyId, null, null, "AUTO");
     verify(surveyService).getAll();
     verify(statisticsService).getTraffic(surveyId, from, to, "Asia/Ho_Chi_Minh", "DAY");
@@ -114,13 +107,14 @@ class DashboardPermissionTest {
   }
 
   @Test
-  void dashboardTotalsUseAllSurveysRegardlessOfSurveyAccess() {
+  void dashboardTotalsUseScopedSurveys() {
     SurveyRepository repository = mock(SurveyRepository.class);
-    when(repository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of());
+    SurveyAccessGuard guard = mock(SurveyAccessGuard.class);
+    when(guard.visibleSurveys()).thenReturn(List.of());
     new DashboardService(repository, mock(PageRepository.class), mock(QuestionRepository.class),
         mock(com.trinhcong1120.survey_service.repository.ResponseRepository.class),
-        mock(AnswerRepository.class), mock(SurveyScheduleService.class)).getDashboard();
-    verify(repository).findAllByOrderByCreatedAtDesc();
+        mock(AnswerRepository.class), mock(SurveyScheduleService.class), guard).getDashboard();
+    verify(guard).visibleSurveys();
   }
 
   private void authenticate(String... permissions) {

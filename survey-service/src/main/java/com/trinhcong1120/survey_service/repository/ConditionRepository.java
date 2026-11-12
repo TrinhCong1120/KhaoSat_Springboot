@@ -15,21 +15,73 @@ import java.util.List;
 public interface ConditionRepository
         extends JpaRepository<Condition, UUID> {
 
+  @Query("""
+      select c from Condition c
+      join c.sourceQuestion sq
+      join sq.page sp
+      left join c.targetQuestion tq
+      left join tq.page tqp
+      left join c.targetPage tp
+      where sp.survey.id = :surveyId
+      or (tqp is not null and tqp.survey.id = :surveyId)
+      or (tp is not null and tp.survey.id = :surveyId)
+  """)
   List<Condition> findBySourceQuestion_Page_Survey_IdOrTargetQuestion_Page_Survey_Id(
-          UUID sourceSurveyId,
-          UUID targetSurveyId
+          @Param("surveyId") UUID sourceSurveyId,
+          @Param("surveyId") UUID targetSurveyId
   );
+
+  @Query("""
+      select c from Condition c
+      join c.sourceQuestion sq
+      join sq.page sp
+      left join c.targetQuestion tq
+      left join tq.page tqp
+      left join c.targetPage tp
+      where sp.survey.id = :surveyId
+      or (tqp is not null and tqp.survey.id = :surveyId)
+      or (tp is not null and tp.survey.id = :surveyId)
+  """)
+  List<Condition> findBySurveyId(@Param("surveyId") UUID surveyId);
 
   List<Condition> findBySourceQuestion_Id(UUID questionId);
 
   List<Condition> findByTargetQuestion_Id(UUID questionId);
 
-  @Query("select c from Condition c where c.sourceQuestion.page.survey.id in :surveyIds " +
-      "and c.sourceQuestion.page.survey.id = c.targetQuestion.page.survey.id")
+  List<Condition> findByTargetPage_Id(UUID pageId);
+
+  @Query("""
+      select c from Condition c
+      join c.sourceQuestion sq
+      join sq.page sp
+      left join c.targetQuestion tq
+      left join tq.page tqp
+      left join c.targetPage tp
+      where sp.survey.id in :surveyIds
+      and (
+        (c.targetType = 'QUESTION' and tqp is not null and tqp.survey.id = sp.survey.id)
+        or (c.targetType = 'PAGE' and tp is not null and tp.survey.id = sp.survey.id)
+        or (tq is not null and tqp.survey.id = sp.survey.id)
+        or (tp is not null and tp.survey.id = sp.survey.id)
+      )
+  """)
   List<Condition> findBySurveyIds(@Param("surveyIds") List<UUID> surveyIds);
 
-  @Query("select c from Condition c where c.sourceQuestion.page.survey.id = :surveyId " +
-      "and c.targetQuestion.page.survey.id = :surveyId")
+  @Query("""
+      select c from Condition c
+      join c.sourceQuestion sq
+      join sq.page sp
+      left join c.targetQuestion tq
+      left join tq.page tqp
+      left join c.targetPage tp
+      where sp.survey.id = :surveyId
+      and (
+        (c.targetType = 'QUESTION' and tqp is not null and tqp.survey.id = :surveyId)
+        or (c.targetType = 'PAGE' and tp is not null and tp.survey.id = :surveyId)
+        or (tq is not null and tqp.survey.id = :surveyId)
+        or (tp is not null and tp.survey.id = :surveyId)
+      )
+  """)
   List<Condition> findSafeBySurveyId(@Param("surveyId") UUID surveyId);
 
   @Modifying
@@ -46,6 +98,11 @@ public interface ConditionRepository
                     SELECT q.id
                     FROM questions q
                     JOIN pages p ON q.page_id = p.id
+                    WHERE p.survey_id = :surveyId
+                  )
+                  OR target_page_id IN (
+                    SELECT p.id
+                    FROM pages p
                     WHERE p.survey_id = :surveyId
                   )
                   """,

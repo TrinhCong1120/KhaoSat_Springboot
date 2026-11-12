@@ -58,12 +58,17 @@ public class InboxStore {
             (id,channel,provider_key,provider_message_id,sender_address,reply_destination,recipient_address,
              sender_user_id,matched_delivery_id,subject,content,kind,received_at)
             VALUES (?,?,?,?,?,?,?,(SELECT id FROM users WHERE
-                CASE WHEN ? = 'EMAIL' THEN lower(email) = lower(?) ELSE telegram_chat_id::text = ? END
+                CASE
+                    WHEN ? = 'EMAIL' THEN lower(email) = lower(?)
+                    WHEN ? = 'TELEGRAM' THEN telegram_chat_id::text = ?
+                    ELSE zalo_chat_id = ?
+                END
                 LIMIT 1),?,?,?,?,?)
             ON CONFLICT (provider_key) DO NOTHING
             """, id, channel, providerKey, limit(providerMessageId, 500), limit(sender, 500),
                 limit(replyDestination, 500), limit(recipient, 500),
-                channel, sender, sender, match, limit(subject, 500), content, kind, Timestamp.from(receivedAt));
+                channel, sender, channel, sender, sender, match, limit(subject, 500), content, kind,
+                Timestamp.from(receivedAt));
         return jdbc.queryForObject("SELECT id FROM notification_inbox_messages WHERE provider_key = ?", UUID.class, providerKey);
     }
 

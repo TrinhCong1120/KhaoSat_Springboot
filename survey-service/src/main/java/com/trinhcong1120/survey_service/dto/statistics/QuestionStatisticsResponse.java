@@ -13,6 +13,7 @@ public class QuestionStatisticsResponse {
     private DateStatisticsResponse dateStatistics;
     private AddressStatisticsResponse addressStatistics;
     private TextStatisticsResponse textStatistics;
+    private MatrixStatisticsResponse matrixStatistics;
 
     public QuestionStatisticsResponse() {
     }
@@ -79,5 +80,13 @@ public class QuestionStatisticsResponse {
 
     public void setTextStatistics(TextStatisticsResponse textStatistics) {
         this.textStatistics = textStatistics;
+    }
+
+    public MatrixStatisticsResponse getMatrixStatistics() {
+        return matrixStatistics;
+    }
+
+    public void setMatrixStatistics(MatrixStatisticsResponse matrixStatistics) {
+        this.matrixStatistics = matrixStatistics;
     }
 }

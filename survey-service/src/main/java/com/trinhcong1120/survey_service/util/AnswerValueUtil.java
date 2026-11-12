@@ -52,6 +52,12 @@ public final class AnswerValueUtil {
       case "ADDRESS" ->
               formatAddress(answer);
 
+      case "MATRIX_SINGLE",
+           "MATRIX_MULTI",
+           "MATRIX_INPUT",
+           "DYNAMIC_TABLE" ->
+              formatMatrix(answer);
+
       default ->
               formatText(answer);
     };
@@ -163,6 +169,13 @@ public final class AnswerValueUtil {
     return value;
   }
 
+  public static String formatMatrix(Answer answer) {
+    if (answer == null || answer.getMatrixData() == null || answer.getMatrixData().isBlank()) {
+      return null;
+    }
+    return "Đã điền dữ liệu ma trận / bảng biểu";
+  }
+
   public static boolean hasValue(
           Question question,
           Answer answer
@@ -199,6 +212,12 @@ public final class AnswerValueUtil {
 
       case "ADDRESS" ->
               hasAddressValue(answer);
+
+      case "MATRIX_SINGLE",
+           "MATRIX_MULTI",
+           "MATRIX_INPUT",
+           "DYNAMIC_TABLE" ->
+              answer.getMatrixData() != null && !answer.getMatrixData().isBlank();
 
       default ->
               normalize(answer.getAnswerText()) != null;

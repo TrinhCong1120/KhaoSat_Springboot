@@ -14,13 +14,30 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/Surveys/{surveyId}")
 public class SurveyAccessController {
   private final SurveyAccessService service;
+  private final com.trinhcong1120.survey_service.security.SurveyAccessGuard guard;
 
-  public SurveyAccessController(SurveyAccessService service) { this.service = service; }
+  public SurveyAccessController(SurveyAccessService service,
+      com.trinhcong1120.survey_service.security.SurveyAccessGuard guard) {
+    this.service = service; this.guard = guard;
+  }
 
   @GetMapping("/access")
   @PreAuthorize("@surveyAccessGuard.canManageAccess(#surveyId)")
   public ResponseEntity<List<AccessResponse>> list(@PathVariable UUID surveyId) {
     return ResponseEntity.ok(service.list(surveyId));
+  }
+
+  @GetMapping("/access/effective")
+  @PreAuthorize("@surveyAccessGuard.canManageAccess(#surveyId)")
+  public java.util.Set<String> effective(@PathVariable UUID surveyId) {
+    return guard.effectiveSurveyPermissions(surveyId);
+  }
+
+  @GetMapping("/access/users/search")
+  @PreAuthorize("@surveyAccessGuard.canManageAccess(#surveyId)")
+  public ResponseEntity<List<SurveyAccessService.UserRow>> search(@PathVariable UUID surveyId,
+      @RequestParam String q) {
+    return ResponseEntity.ok(service.searchUsers(surveyId, q));
   }
 
   @PutMapping("/access/{userId}")
@@ -38,7 +55,7 @@ public class SurveyAccessController {
   }
 
   @PutMapping("/owner")
-  @PreAuthorize("@surveyAccessGuard.canManageAccess(#surveyId)")
+  @PreAuthorize("@surveyAccessGuard.has('survey_update_all')")
   public ResponseEntity<Void> changeOwner(@PathVariable UUID surveyId, @RequestBody OwnerRequest request) {
     service.changeOwner(surveyId, request);
     return ResponseEntity.noContent().build();

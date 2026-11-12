@@ -19,7 +19,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 @Service
 public class SurveyAlertService {
-  private record UserInfo(String username, String email, Long telegramChatId) {}
+  private record UserInfo(String username, String email, Long telegramChatId, String zaloChatId) {}
   private static final DateTimeFormatter VIETNAM_TIME = DateTimeFormatter
       .ofPattern("dd/MM/yyyy HH:mm:ss 'GMT+7'")
       .withZone(ZoneId.of("Asia/Ho_Chi_Minh"));
@@ -61,17 +61,18 @@ public class SurveyAlertService {
       UUID actorId,
       UserInfo... owners) {
     List<UserInfo> recipients = new ArrayList<>(jdbc.query(
-        "SELECT DISTINCT u.username, u.email, u.telegram_chat_id FROM users u "
+        "SELECT DISTINCT u.username, u.email, u.telegram_chat_id, u.zalo_chat_id FROM users u "
             + "JOIN user_roles ur ON ur.user_id = u.id "
             + "JOIN roles r ON r.id = ur.role_id WHERE u.is_active IS TRUE "
             + "AND lower(r.name) = 'admin'",
         (rs, rowNum) -> new UserInfo(rs.getString("username"), rs.getString("email"),
-            rs.getObject("telegram_chat_id", Long.class))));
+            rs.getObject("telegram_chat_id", Long.class), rs.getString("zalo_chat_id"))));
     for (UserInfo owner : owners) {
       if (owner != null) recipients.add(owner);
     }
     LinkedHashMap<String, String> uniqueEmails = new LinkedHashMap<>();
     LinkedHashSet<Long> uniqueChatIds = new LinkedHashSet<>();
+    LinkedHashSet<String> uniqueZaloIds = new LinkedHashSet<>();
     for (UserInfo recipient : recipients) {
       String email = recipient.email();
       if (email != null && !email.isBlank()) {
@@ -81,12 +82,17 @@ public class SurveyAlertService {
       if (recipient.telegramChatId() != null) {
         uniqueChatIds.add(recipient.telegramChatId());
       }
+      if (recipient.zaloChatId() != null && !recipient.zaloChatId().isBlank()) {
+        uniqueZaloIds.add(recipient.zaloChatId().trim());
+      }
     }
     List<NotificationEvent> events = new ArrayList<>();
     uniqueEmails.values().forEach(email -> events.add(
         new NotificationEvent(type, email, null, subject, message, surveyId, null, actorId, null)));
     uniqueChatIds.forEach(chatId -> events.add(
         new NotificationEvent(type, null, null, subject, message, surveyId, chatId, actorId, null)));
+    uniqueZaloIds.forEach(zaloId -> events.add(
+        NotificationEvent.zalo(type, subject, message, surveyId, zaloId, actorId)));
     TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
       @Override
       public void afterCommit() {
@@ -97,10 +103,10 @@ public class SurveyAlertService {
 
   private UserInfo user(UUID id) {
     if (id == null) return null;
-    return jdbc.query("SELECT username, email, telegram_chat_id FROM users "
+    return jdbc.query("SELECT username, email, telegram_chat_id, zalo_chat_id FROM users "
             + "WHERE id = ? AND is_active IS TRUE",
         (rs, rowNum) -> new UserInfo(rs.getString("username"), rs.getString("email"),
-            rs.getObject("telegram_chat_id", Long.class)), id)
+            rs.getObject("telegram_chat_id", Long.class), rs.getString("zalo_chat_id")), id)
         .stream().findFirst().orElse(null);
   }
 

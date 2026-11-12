@@ -4,11 +4,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.trinhcong1120.survey_service.entity.Survey;
-import com.trinhcong1120.survey_service.entity.SurveyAccess;
 import com.trinhcong1120.survey_service.repository.*;
+import com.trinhcong1120.survey_service.security.GroupPermissions;
 import com.trinhcong1120.survey_service.security.SurveyAccessGuard;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,142 +21,100 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 class SurveyAccessGuardTest {
+  private final UUID userId = UUID.randomUUID();
   private final UUID ownerId = UUID.randomUUID();
-  private final UUID editorId = UUID.randomUUID();
   private final UUID surveyId = UUID.randomUUID();
+  private final UUID childGroupId = UUID.randomUUID();
   private final SurveyRepository surveys = mock(SurveyRepository.class);
-  private final SurveyAccessRepository accesses = mock(SurveyAccessRepository.class);
+  private final GroupPermissions permissions = mock(GroupPermissions.class);
   private SurveyAccessGuard guard;
 
-  @BeforeEach
-  void setUp() {
-    guard = new SurveyAccessGuard(surveys, accesses, mock(PageRepository.class),
-        mock(QuestionRepository.class), mock(OptionRepository.class),
-        mock(ConditionRepository.class), mock(ResponseRepository.class),
-        mock(MediaFileRepository.class));
+  @BeforeEach void setUp() {
+    guard = new SurveyAccessGuard(surveys, mock(PageRepository.class),
+        mock(QuestionRepository.class), mock(OptionRepository.class), mock(ConditionRepository.class),
+        mock(ResponseRepository.class), mock(MediaFileRepository.class), permissions);
     Survey survey = new Survey();
     survey.setId(surveyId);
     survey.setCreatorUserId(ownerId);
+    survey.setGroupId(childGroupId);
     when(surveys.findById(surveyId)).thenReturn(Optional.of(survey));
-    SurveyAccess access = new SurveyAccess();
-    access.setCanView(true);
-    access.setCanEdit(true);
-    when(accesses.findBySurvey_IdAndUserId(surveyId, editorId)).thenReturn(Optional.of(access));
+    when(permissions.survey(surveyId, childGroupId, userId)).thenReturn(Set.of());
+    when(permissions.survey(surveyId, childGroupId, ownerId)).thenReturn(Set.of());
+    when(permissions.visibleSurveyIds(userId, false)).thenReturn(List.of());
   }
 
-  @AfterEach
-  void tearDown() { SecurityContextHolder.clearContext(); }
+  @AfterEach void clear() { SecurityContextHolder.clearContext(); }
 
-  @Test
-  void editorAccessAllowsViewAndEditButNotSurveyDeletion() {
-    authenticate(editorId, "survey_view", "survey_update", "survey_delete");
+  @Test void childGroupRightWorksWithoutParentOrJwtRole() {
+    authenticate(userId);
+    when(permissions.survey(surveyId, childGroupId, userId)).thenReturn(Set.of("EDIT"));
     assertDoesNotThrow(() -> guard.view(surveyId));
     assertDoesNotThrow(() -> guard.edit(surveyId));
     assertThrows(AccessDeniedException.class, () -> guard.delete(surveyId));
-    assertThrows(AccessDeniedException.class, () -> guard.manageAccess(surveyId));
-
   }
 
-  @Test
-  void ownerPassesObjectChecks() {
-    authenticate(ownerId, "survey_view", "survey_update", "survey_delete");
+  @Test void directSurveyRightWorksWithoutGroupOrJwtRole() {
+    authenticate(userId);
+    when(permissions.group(childGroupId, userId)).thenReturn(Set.of());
+    when(permissions.survey(surveyId, childGroupId, userId)).thenReturn(Set.of("VIEW_RESPONSES", "MANAGE_ACCESS"));
     assertDoesNotThrow(() -> guard.view(surveyId));
-    assertDoesNotThrow(() -> guard.edit(surveyId));
-    assertDoesNotThrow(() -> guard.delete(surveyId));
+    assertDoesNotThrow(() -> guard.viewResponses(surveyId));
     assertDoesNotThrow(() -> guard.manageAccess(surveyId));
-  }
-
-  @Test
-  void globalDeleteNeedsItsOwnPermission() {
-    authenticate(editorId, "survey_update_all");
-    assertThrows(AccessDeniedException.class, () -> guard.view(surveyId));
-    assertDoesNotThrow(() -> guard.edit(surveyId));
-    assertDoesNotThrow(() -> guard.manageAccess(surveyId));
-    assertThrows(AccessDeniedException.class, () -> guard.delete(surveyId));
-
-    authenticate(editorId, "survey_update_all", "survey_delete");
-    assertThrows(AccessDeniedException.class, () -> guard.delete(surveyId));
-
-    authenticate(editorId, "survey_delete_all");
-    assertDoesNotThrow(() -> guard.delete(surveyId));
-  }
-
-  @Test
-  void accessOrOwnershipWithoutPermissionIsDenied() {
-    authenticate(editorId);
-    assertThrows(AccessDeniedException.class, () -> guard.view(surveyId));
     assertThrows(AccessDeniedException.class, () -> guard.edit(surveyId));
+    assertThrows(AccessDeniedException.class, () -> guard.exportData(surveyId));
+  }
+
+  @Test void creatorHasNoAutomaticRight() {
     authenticate(ownerId);
-    assertFalse(guard.canManageAccess(surveyId));
     assertThrows(AccessDeniedException.class, () -> guard.view(surveyId));
     assertThrows(AccessDeniedException.class, () -> guard.edit(surveyId));
     assertThrows(AccessDeniedException.class, () -> guard.delete(surveyId));
-    assertThrows(AccessDeniedException.class, () -> guard.manageAccess(surveyId));
   }
 
-  @Test
-  void permissionWithoutMatchingAccessIsDenied() {
-    authenticate(UUID.randomUUID(), "survey_view", "survey_update", "survey_delete");
-    assertThrows(AccessDeniedException.class, () -> guard.view(surveyId));
-    assertThrows(AccessDeniedException.class, () -> guard.edit(surveyId));
-    assertThrows(AccessDeniedException.class, () -> guard.delete(surveyId));
-    assertThrows(AccessDeniedException.class, () -> guard.manageAccess(surveyId));
+  @Test void exportAndResponseViewRemainSeparateRights() {
+    authenticate(userId);
+    when(permissions.survey(surveyId, childGroupId, userId)).thenReturn(Set.of("VIEW"));
+    assertDoesNotThrow(() -> guard.view(surveyId));
+    assertThrows(AccessDeniedException.class, () -> guard.viewResponses(surveyId));
+    assertThrows(AccessDeniedException.class, () -> guard.exportData(surveyId));
+    when(permissions.survey(surveyId, childGroupId, userId)).thenReturn(Set.of("EXPORT_DATA"));
+    assertThrows(AccessDeniedException.class, () -> guard.viewResponses(surveyId));
+    assertDoesNotThrow(() -> guard.exportData(surveyId));
   }
 
-  @Test
-  void viewerAccessNeverGrantsEdit() {
-    SurveyAccess viewOnly = new SurveyAccess();
-    viewOnly.setCanView(true);
-    when(accesses.findBySurvey_IdAndUserId(surveyId, editorId)).thenReturn(Optional.of(viewOnly));
-    authenticate(editorId, "survey_view", "survey_update");
+  @Test void revokingGroupDoesNotRemoveDirectSurveyRight() {
+    authenticate(userId);
+    when(permissions.survey(surveyId, childGroupId, userId)).thenReturn(Set.of("VIEW", "EDIT"));
+    assertDoesNotThrow(() -> guard.edit(surveyId));
+    when(permissions.survey(surveyId, childGroupId, userId)).thenReturn(Set.of("VIEW"));
     assertDoesNotThrow(() -> guard.view(surveyId));
     assertThrows(AccessDeniedException.class, () -> guard.edit(surveyId));
   }
 
-  @Test
-  void visibleListRequiresViewPermission() {
-    authenticate(editorId);
-    assertEquals(0, guard.visibleSurveys().size());
-    verify(surveys, never()).findVisibleTo(editorId);
-    authenticate(editorId, "survey_view");
+  @Test void visibleListIsFilteredForScopedUser() {
+    authenticate(userId);
+    assertTrue(guard.visibleSurveys().isEmpty());
+    verify(surveys, never()).findAllByOrderByCreatedAtDesc();
+    when(permissions.visibleSurveyIds(userId, false)).thenReturn(List.of(surveyId));
     guard.visibleSurveys();
-    verify(surveys).findVisibleTo(editorId);
-    authenticate(editorId, "survey_view_all");
-    guard.visibleSurveys();
-    verify(surveys).findAllByOrderByCreatedAtDesc();
+    verify(surveys).findByIdInOrderByCreatedAtDesc(List.of(surveyId));
   }
 
-  @Test
-  void responseActionsUseTheSamePermissionAndAccessRules() {
-    Survey survey = guard.survey(surveyId);
-    authenticate(editorId, "survey_view", "survey_update", "survey_delete");
-    assertEquals(new SurveyAccessGuard.Actions(true, false, false), guard.actions(survey));
-    authenticate(ownerId, "survey_view");
-    assertEquals(new SurveyAccessGuard.Actions(false, false, false), guard.actions(survey));
-    authenticate(ownerId, "survey_update", "survey_delete");
-    assertTrue(guard.canManageAccess(surveyId));
-    assertEquals(new SurveyAccessGuard.Actions(true, true, true), guard.actions(survey));
-    authenticate(UUID.randomUUID(), "survey_update_all", "survey_delete_all");
-    assertEquals(new SurveyAccessGuard.Actions(true, true, true), guard.actions(survey));
+  @Test void globalUpdateDoesNotGrantDelete() {
+    authenticate(userId, "survey_update_all");
+    assertDoesNotThrow(() -> guard.edit(surveyId));
+    assertThrows(AccessDeniedException.class, () -> guard.delete(surveyId));
   }
 
-  @Test
-  void globalViewDoesNotGrantEditWithoutAccess() {
-    authenticate(UUID.randomUUID(), "survey_view_all");
-    assertDoesNotThrow(() -> guard.view(surveyId));
-    assertThrows(AccessDeniedException.class, () -> guard.edit(surveyId));
+  @Test void staleManagerJwtCannotKeepRevokedGlobalDelete() {
+    authenticate(userId, "survey_delete_all");
+    assertThrows(AccessDeniedException.class, () -> guard.delete(surveyId));
+    when(permissions.hasCurrentGlobalPermission(userId, "survey_delete_all")).thenReturn(true);
+    assertDoesNotThrow(() -> guard.delete(surveyId));
   }
 
-  @Test
-  void unrelatedUserCannotViewOrEdit() {
-    authenticate(UUID.randomUUID());
-    assertThrows(AccessDeniedException.class, () -> guard.view(surveyId));
-    assertThrows(AccessDeniedException.class, () -> guard.edit(surveyId));
-  }
-
-  private void authenticate(UUID userId, String... permissions) {
-    SecurityContextHolder.getContext().setAuthentication(
-        new UsernamePasswordAuthenticationToken(userId.toString(), null,
-            Arrays.stream(permissions).map(SimpleGrantedAuthority::new).toList()));
+  private void authenticate(UUID id, String... roles) {
+    SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+        id.toString(), null, Arrays.stream(roles).map(SimpleGrantedAuthority::new).toList()));
   }
 }

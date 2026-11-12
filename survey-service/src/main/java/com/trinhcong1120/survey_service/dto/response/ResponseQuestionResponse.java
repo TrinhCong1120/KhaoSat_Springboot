@@ -35,6 +35,8 @@ public class ResponseQuestionResponse {
     private List<UUID> optionIds = new ArrayList<>();
     private List<String> optionTexts = new ArrayList<>();
 
+    private String matrixData;
+    private String matrixConfig;
     private String formattedAnswer;
 
     public ResponseQuestionResponse() {
@@ -182,6 +184,22 @@ public class ResponseQuestionResponse {
 
     public void setOptionTexts(List<String> optionTexts) {
         this.optionTexts = optionTexts;
+    }
+
+    public String getMatrixData() {
+        return matrixData;
+    }
+
+    public void setMatrixData(String matrixData) {
+        this.matrixData = matrixData;
+    }
+
+    public String getMatrixConfig() {
+        return matrixConfig;
+    }
+
+    public void setMatrixConfig(String matrixConfig) {
+        this.matrixConfig = matrixConfig;
     }
 
     public String getFormattedAnswer() {

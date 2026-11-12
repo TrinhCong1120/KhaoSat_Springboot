@@ -11,6 +11,7 @@ public class NotificationEvent {
     private String message;
     private UUID referenceId;
     private Long telegramChatId;
+    private String zaloChatId;
     private UUID actorId;
     private UUID recipientId;
     private UUID eventId;
@@ -101,6 +102,14 @@ public class NotificationEvent {
 
     public void setTelegramChatId(Long telegramChatId) {
         this.telegramChatId = telegramChatId;
+    }
+
+    public String getZaloChatId() {
+        return zaloChatId;
+    }
+
+    public void setZaloChatId(String zaloChatId) {
+        this.zaloChatId = zaloChatId;
     }
 
     public UUID getActorId() { return actorId; }

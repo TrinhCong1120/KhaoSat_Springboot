@@ -35,6 +35,7 @@ public class AdminGrantAlertService {
         User actor = users.findById(actorId).orElseThrow();
         LinkedHashMap<String, String> uniqueEmails = new LinkedHashMap<>();
         LinkedHashSet<Long> uniqueChatIds = new LinkedHashSet<>();
+        LinkedHashSet<String> uniqueZaloIds = new LinkedHashSet<>();
         for (User admin : users.findActiveAdmins()) {
             String email = admin.getEmail();
             if (email != null && !email.isBlank()) {
@@ -43,6 +44,9 @@ public class AdminGrantAlertService {
             }
             if (admin.getTelegramChatId() != null) {
                 uniqueChatIds.add(admin.getTelegramChatId());
+            }
+            if (admin.getZaloChatId() != null && !admin.getZaloChatId().isBlank()) {
+                uniqueZaloIds.add(admin.getZaloChatId().trim());
             }
         }
         String message = "Tài khoản " + target.getUsername() + " (" + target.getId()
@@ -58,6 +62,13 @@ public class AdminGrantAlertService {
         uniqueChatIds.forEach(chatId -> {
             NotificationEvent event = new NotificationEvent("ADMIN_ROLE_GRANTED", null,
                     target.getUsername(), "Cảnh báo: cấp quyền Admin", message, target.getId(), chatId);
+            event.setActorId(actorId);
+            events.add(event);
+        });
+        uniqueZaloIds.forEach(zaloId -> {
+            NotificationEvent event = new NotificationEvent("ADMIN_ROLE_GRANTED", null,
+                    target.getUsername(), "Cảnh báo: cấp quyền Admin", message, target.getId());
+            event.setZaloChatId(zaloId);
             event.setActorId(actorId);
             events.add(event);
         });

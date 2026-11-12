@@ -13,8 +13,11 @@ public class UpdateConditionRequest {
     @NotBlank(message = "Giá trị điều kiện không được để trống")
     private String sourceValue;
 
-    @NotNull(message = "ID câu hỏi đích không được để trống")
+    private String targetType = "QUESTION";
+
     private UUID targetQuestionId;
+
+    private UUID targetPageId;
 
     @NotBlank(message = "Hành động điều kiện không được để trống")
     private String action;
@@ -38,12 +41,28 @@ public class UpdateConditionRequest {
         this.sourceValue = sourceValue;
     }
 
+    public String getTargetType() {
+        return targetType != null ? targetType : "QUESTION";
+    }
+
+    public void setTargetType(String targetType) {
+        this.targetType = targetType;
+    }
+
     public UUID getTargetQuestionId() {
         return targetQuestionId;
     }
 
     public void setTargetQuestionId(UUID targetQuestionId) {
         this.targetQuestionId = targetQuestionId;
+    }
+
+    public UUID getTargetPageId() {
+        return targetPageId;
+    }
+
+    public void setTargetPageId(UUID targetPageId) {
+        this.targetPageId = targetPageId;
     }
 
     public String getAction() {

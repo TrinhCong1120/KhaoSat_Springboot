@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/Dashboard")
-@PreAuthorize("hasAuthority('dashboard_view')")
+@PreAuthorize("hasAuthority('dashboard_view') or hasAuthority('survey_view')")
 public class DashboardController {
 
   private final DashboardService dashboardService;

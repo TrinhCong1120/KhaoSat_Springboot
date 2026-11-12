@@ -846,6 +846,8 @@ public class AnswerValidationService {
       case "NUMBER" -> answer.getAnswerNumber() != null;
       case "DATE" -> answer.getAnswerDate() != null;
       case "ADDRESS" -> hasAddressValue(answer);
+      case "MATRIX_SINGLE", "MATRIX_MULTI", "MATRIX_INPUT", "DYNAMIC_TABLE" ->
+          (answer.getMatrixData() != null && !answer.getMatrixData().isBlank()) || hasOptionIds(answer) || answer.getAnswerNumber() != null || hasText(answer);
       default -> hasText(answer);
     };
   }
@@ -856,6 +858,7 @@ public class AnswerValidationService {
       case "NUMBER" -> "answerNumber";
       case "DATE" -> "answerDate";
       case "ADDRESS" -> "address";
+      case "MATRIX_SINGLE", "MATRIX_MULTI", "MATRIX_INPUT", "DYNAMIC_TABLE" -> "matrixData";
       default -> "answerText";
     };
   }

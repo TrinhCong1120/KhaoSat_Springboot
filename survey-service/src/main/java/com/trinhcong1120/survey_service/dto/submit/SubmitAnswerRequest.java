@@ -26,6 +26,8 @@ public class SubmitAnswerRequest {
 
     private List<UUID> optionIds = new ArrayList<>();
 
+    private String matrixData;
+
     public SubmitAnswerRequest() {
     }
 
@@ -107,5 +109,13 @@ public class SubmitAnswerRequest {
 
     public void setOptionIds(List<UUID> optionIds) {
         this.optionIds = optionIds;
+    }
+
+    public String getMatrixData() {
+        return matrixData;
+    }
+
+    public void setMatrixData(String matrixData) {
+        this.matrixData = matrixData;
     }
 }

@@ -10,6 +10,8 @@ import com.trinhcong1120.survey_service.entity.Response;
 import com.trinhcong1120.survey_service.exception.NotFoundException;
 import com.trinhcong1120.survey_service.exception.BadRequestException;
 import com.trinhcong1120.survey_service.repository.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +42,7 @@ public class StatisticsService {
   private final ResponseRepository responseRepository;
   private final PageRepository pageRepository;
   private final JdbcTemplate jdbc;
+  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
   public record PageStatistics(UUID pageId, String title, Integer orderIndex,
       Long viewedSessions, Long completedSessions, long submittedResponsesWithAnswers,
@@ -80,7 +83,7 @@ public class StatisticsService {
 
   /** Số phiên vào/hoàn thành trang là tracking từ FE; phản hồi có câu trả lời là dữ liệu BE xác nhận. */
   public SurveyPageStatistics getPageStatistics(UUID surveyId) {
-    guard.view(surveyId);
+    guard.viewResponses(surveyId);
     List<Page> pages = pageRepository.findBySurvey_IdOrderByOrderIndexAsc(surveyId);
     Map<UUID, long[]> visits = new HashMap<>();
     jdbc.query("select page_id, count(distinct session_id) viewed, "
@@ -108,7 +111,7 @@ public class StatisticsService {
   }
 
   public List<ResponseTimelinePoint> getResponseTimeline(UUID surveyId) {
-    guard.view(surveyId);
+    guard.viewResponses(surveyId);
     return jdbc.query("select (submitted_at at time zone 'Asia/Ho_Chi_Minh')::date statistic_date, "
             + "count(*) total from responses where survey_id=? and submitted_at >= now() - interval '30 days' "
             + "group by statistic_date order by statistic_date",
@@ -119,7 +122,7 @@ public class StatisticsService {
   /** Đếm một cohort Session đã VIEWED; các tỷ lệ không trộn view và submit của hai nhóm phiên khác nhau. */
   public TrafficResult getTraffic(UUID surveyId, Instant from, Instant to, String timezone,
       String bucket) {
-    guard.view(surveyId);
+    guard.viewResponses(surveyId);
     Instant generatedAt = Instant.now();
     if (from == null || to == null || !from.isBefore(to) || !from.isBefore(generatedAt))
       throw new BadRequestException("from/to phai la khoang thoi gian hop le trong qua khu");
@@ -231,7 +234,7 @@ public class StatisticsService {
           UUID surveyId,
           ResponseFilterRequest filter
   ) {
-    guard.view(surveyId);
+    guard.viewResponses(surveyId);
     Survey survey = surveyRepository.findById(surveyId)
             .orElseThrow(() ->
                     new NotFoundException(
@@ -330,12 +333,198 @@ public class StatisticsService {
               result.setAddressStatistics(
                       buildAddress(answers));
 
+      case "MATRIX_SINGLE",
+           "MATRIX_MULTI",
+           "MATRIX_INPUT",
+           "DYNAMIC_TABLE" ->
+              result.setMatrixStatistics(
+                      buildMatrix(question, answers, totalResponses));
+
       default ->
               result.setTextStatistics(
                       buildText(answers));
     }
 
     return result;
+  }
+
+  private MatrixStatisticsResponse buildMatrix(
+          Question question,
+          List<Answer> answers,
+          long totalResponses
+  ) {
+    String type = question.getQuestionType() == null ? "" : question.getQuestionType().getCode();
+    String configStr = question.getMatrixConfig();
+    if (configStr == null || configStr.isBlank()) {
+      return new MatrixStatisticsResponse(0L, List.of(), List.of());
+    }
+
+    try {
+      JsonNode configNode = JSON_MAPPER.readTree(configStr);
+      JsonNode rowsNode = configNode.get("rows");
+      JsonNode colsNode = configNode.get("columns");
+
+      List<MatrixStatisticsResponse.RowStatistic> rowStats = new ArrayList<>();
+      List<MatrixStatisticsResponse.ColumnStatistic> colStats = new ArrayList<>();
+
+      Map<String, String> colLabels = new LinkedHashMap<>();
+      Map<String, Double> colScores = new HashMap<>();
+      Map<String, String> colTypes = new HashMap<>();
+
+      if (colsNode != null && colsNode.isArray()) {
+        for (JsonNode col : colsNode) {
+          String cId = col.path("id").asText();
+          String cLabel = col.path("label").asText(cId);
+          colLabels.put(cId, cLabel);
+          if (col.has("score")) {
+            colScores.put(cId, col.get("score").asDouble());
+          }
+          if (col.has("type")) {
+            colTypes.put(cId, col.get("type").asText("text"));
+          }
+        }
+      }
+
+      if ("DYNAMIC_TABLE".equals(type)) {
+        Map<String, List<Double>> numericValues = new HashMap<>();
+        Map<String, Long> filledCounts = new HashMap<>();
+
+        for (Answer ans : answers) {
+          String dataStr = ans.getMatrixData();
+          if (dataStr == null || dataStr.isBlank()) continue;
+          try {
+            JsonNode dataNode = JSON_MAPPER.readTree(dataStr);
+            if (dataNode.isArray()) {
+              for (JsonNode rowItem : dataNode) {
+                for (String cId : colLabels.keySet()) {
+                  if (rowItem.has(cId) && !rowItem.get(cId).isNull() && !rowItem.get(cId).asText("").isBlank()) {
+                    filledCounts.merge(cId, 1L, Long::sum);
+                    if ("number".equals(colTypes.get(cId))) {
+                      try {
+                        double v = Double.parseDouble(rowItem.get(cId).asText());
+                        numericValues.computeIfAbsent(cId, k -> new ArrayList<>()).add(v);
+                      } catch (Exception ignored) {}
+                    }
+                  }
+                }
+              }
+            }
+          } catch (Exception ignored) {}
+        }
+
+        for (Map.Entry<String, String> entry : colLabels.entrySet()) {
+          String cId = entry.getKey();
+          String cLabel = entry.getValue();
+          String cType = colTypes.getOrDefault(cId, "text");
+          Long filled = filledCounts.getOrDefault(cId, 0L);
+          Double avg = null;
+          Double min = null;
+          Double max = null;
+
+          List<Double> nums = numericValues.get(cId);
+          if (nums != null && !nums.isEmpty()) {
+            double sum = 0;
+            min = nums.get(0);
+            max = nums.get(0);
+            for (double d : nums) {
+              sum += d;
+              if (d < min) min = d;
+              if (d > max) max = d;
+            }
+            avg = Math.round((sum / nums.size()) * 100.0) / 100.0;
+          }
+
+          colStats.add(new MatrixStatisticsResponse.ColumnStatistic(
+              cId, cLabel, cType, filled, avg, min, max
+          ));
+        }
+
+        return new MatrixStatisticsResponse((long) answers.size(), List.of(), colStats);
+      }
+
+      // For MATRIX_SINGLE, MATRIX_MULTI, MATRIX_INPUT
+      if (rowsNode != null && rowsNode.isArray()) {
+        for (JsonNode r : rowsNode) {
+          String rId = r.path("id").asText();
+          String rLabel = r.path("label").asText(rId);
+
+          Map<String, Long> counts = new LinkedHashMap<>();
+          for (String cId : colLabels.keySet()) {
+            counts.put(cId, 0L);
+          }
+
+          long rowTotal = 0;
+          double scoreSum = 0;
+          long scoreCount = 0;
+
+          for (Answer ans : answers) {
+            String dataStr = ans.getMatrixData();
+            if (dataStr == null || dataStr.isBlank()) continue;
+            try {
+              JsonNode dataNode = JSON_MAPPER.readTree(dataStr);
+              if ("MATRIX_SINGLE".equals(type)) {
+                if (dataNode.has(rId)) {
+                  String chosenCol = dataNode.get(rId).asText();
+                  if (counts.containsKey(chosenCol)) {
+                    counts.put(chosenCol, counts.get(chosenCol) + 1);
+                    rowTotal++;
+                    if (colScores.containsKey(chosenCol)) {
+                      scoreSum += colScores.get(chosenCol);
+                      scoreCount++;
+                    }
+                  }
+                }
+              } else if ("MATRIX_MULTI".equals(type)) {
+                if (dataNode.has(rId) && dataNode.get(rId).isArray()) {
+                  boolean checkedAny = false;
+                  for (JsonNode colItem : dataNode.get(rId)) {
+                    String chosenCol = colItem.asText();
+                    if (counts.containsKey(chosenCol)) {
+                      counts.put(chosenCol, counts.get(chosenCol) + 1);
+                      checkedAny = true;
+                    }
+                  }
+                  if (checkedAny) rowTotal++;
+                }
+              } else if ("MATRIX_INPUT".equals(type)) {
+                if (dataNode.has(rId) && dataNode.get(rId).isObject()) {
+                  JsonNode rowObj = dataNode.get(rId);
+                  boolean filledAny = false;
+                  for (String cId : colLabels.keySet()) {
+                    if (rowObj.has(cId) && !rowObj.get(cId).asText("").isBlank()) {
+                      counts.put(cId, counts.get(cId) + 1);
+                      filledAny = true;
+                    }
+                  }
+                  if (filledAny) rowTotal++;
+                }
+              }
+            } catch (Exception ignored) {}
+          }
+
+          List<MatrixStatisticsResponse.CellStatistic> cells = new ArrayList<>();
+          for (Map.Entry<String, String> entry : colLabels.entrySet()) {
+            String cId = entry.getKey();
+            String cLabel = entry.getValue();
+            long cCount = counts.getOrDefault(cId, 0L);
+            double percentage = rowTotal > 0
+                ? Math.round((cCount * 100.0 / rowTotal) * 10.0) / 10.0
+                : 0.0;
+            cells.add(new MatrixStatisticsResponse.CellStatistic(cId, cLabel, cCount, percentage));
+          }
+
+          Double avgScore = scoreCount > 0
+              ? Math.round((scoreSum / scoreCount) * 100.0) / 100.0
+              : null;
+
+          rowStats.add(new MatrixStatisticsResponse.RowStatistic(rId, rLabel, rowTotal, avgScore, cells));
+        }
+      }
+
+      return new MatrixStatisticsResponse((long) answers.size(), rowStats, colStats);
+    } catch (Exception e) {
+      return new MatrixStatisticsResponse(0L, List.of(), List.of());
+    }
   }
 
   private ChoiceStatisticsResponse buildChoice(

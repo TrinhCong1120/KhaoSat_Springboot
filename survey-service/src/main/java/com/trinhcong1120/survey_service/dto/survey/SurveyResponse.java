@@ -15,6 +15,11 @@ public class SurveyResponse {
     private String description;
     private String creatorUser;
     private UUID creatorUserId;
+    private UUID groupId;
+    private boolean canViewResponses;
+    private boolean canExportData;
+    private boolean canManagePublication;
+    private boolean sharedDirectly;
     private boolean canEdit;
     private boolean canDelete;
     private boolean canManageAccess;
@@ -76,6 +81,16 @@ public class SurveyResponse {
 
     public UUID getCreatorUserId() { return creatorUserId; }
     public void setCreatorUserId(UUID creatorUserId) { this.creatorUserId = creatorUserId; }
+    public UUID getGroupId() { return groupId; }
+    public void setGroupId(UUID groupId) { this.groupId = groupId; }
+    public boolean isCanViewResponses() { return canViewResponses; }
+    public void setCanViewResponses(boolean value) { canViewResponses = value; }
+    public boolean isCanExportData() { return canExportData; }
+    public void setCanExportData(boolean value) { canExportData = value; }
+    public boolean isCanManagePublication() { return canManagePublication; }
+    public void setCanManagePublication(boolean value) { canManagePublication = value; }
+    public boolean isSharedDirectly() { return sharedDirectly; }
+    public void setSharedDirectly(boolean value) { sharedDirectly = value; }
     public boolean isCanEdit() { return canEdit; }
     public void setCanEdit(boolean canEdit) { this.canEdit = canEdit; }
     public boolean isCanDelete() { return canDelete; }
@@ -102,6 +117,8 @@ public class SurveyResponse {
     public LocalDateTime getCloseAt() { return closeAt; }
     public void setCloseAt(LocalDateTime closeAt) { this.closeAt = closeAt; }
 
+    private GoogleIntegrationDto googleIntegration;
+
     public List<MediaUploadResponse> getMediaFiles() {
         return mediaFiles;
     }
@@ -109,4 +126,8 @@ public class SurveyResponse {
     public void setMediaFiles(List<MediaUploadResponse> mediaFiles) {
         this.mediaFiles = mediaFiles == null ? new ArrayList<>() : mediaFiles;
     }
+
+    public GoogleIntegrationDto getGoogleIntegration() { return googleIntegration; }
+    public void setGoogleIntegration(GoogleIntegrationDto googleIntegration) { this.googleIntegration = googleIntegration; }
 }
+

@@ -38,6 +38,36 @@ public class Question {
   private String description;
 
   @JsonIgnore
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "parent_id")
+  private Question parent;
+
+  @JsonIgnore
+  @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY)
+  private List<Question> children = new ArrayList<>();
+
+  @Column(name = "level")
+  private Integer level = 1;
+
+  @Column(name = "path", columnDefinition = "TEXT")
+  private String path = "";
+
+  @Column(name = "is_leaf")
+  private Boolean isLeaf = true;
+
+  @Column(name = "aggregation_type", length = 50)
+  private String aggregationType = "NONE";
+
+  @Column(name = "aggregation_formula", columnDefinition = "TEXT")
+  private String aggregationFormula;
+
+  @Column(name = "weight")
+  private java.math.BigDecimal weight = java.math.BigDecimal.ONE;
+
+  @Column(name = "matrix_config", columnDefinition = "TEXT")
+  private String matrixConfig;
+
+  @JsonIgnore
   @OneToMany(mappedBy = "question", fetch = FetchType.LAZY)
   private List<Option> options = new ArrayList<>();
 
@@ -91,4 +121,31 @@ public class Question {
   public void setTargetConditions(List<Condition> targetConditions) {
     this.targetConditions = targetConditions;
   }
+
+  public Question getParent() { return parent; }
+  public void setParent(Question parent) { this.parent = parent; }
+
+  public List<Question> getChildren() { return children; }
+  public void setChildren(List<Question> children) { this.children = children; }
+
+  public Integer getLevel() { return level != null ? level : 1; }
+  public void setLevel(Integer level) { this.level = level; }
+
+  public String getPath() { return path != null ? path : ""; }
+  public void setPath(String path) { this.path = path; }
+
+  public Boolean getIsLeaf() { return isLeaf != null ? isLeaf : true; }
+  public void setIsLeaf(Boolean isLeaf) { this.isLeaf = isLeaf; }
+
+  public String getAggregationType() { return aggregationType != null ? aggregationType : "NONE"; }
+  public void setAggregationType(String aggregationType) { this.aggregationType = aggregationType; }
+
+  public String getAggregationFormula() { return aggregationFormula; }
+  public void setAggregationFormula(String aggregationFormula) { this.aggregationFormula = aggregationFormula; }
+
+  public java.math.BigDecimal getWeight() { return weight != null ? weight : java.math.BigDecimal.ONE; }
+  public void setWeight(java.math.BigDecimal weight) { this.weight = weight; }
+
+  public String getMatrixConfig() { return matrixConfig; }
+  public void setMatrixConfig(String matrixConfig) { this.matrixConfig = matrixConfig; }
 }

@@ -33,7 +33,6 @@ public class SurveyController {
   }
 
   @GetMapping
-  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
   public ResponseEntity<List<SurveyResponse>> getAll() {
     return ResponseEntity.ok(
             surveyService.getAll()
@@ -41,14 +40,14 @@ public class SurveyController {
   }
 
   @GetMapping("/page")
-  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
   public ResponseEntity<PagedResponse<SurveyResponse>> getPage(
-          @RequestParam(defaultValue = "1") int page) {
-    return ResponseEntity.ok(surveyService.getPage(page));
+          @RequestParam(defaultValue = "1") int page,
+          @RequestParam(required = false) UUID groupId,
+          @RequestParam(defaultValue = "false") boolean shared) {
+    return ResponseEntity.ok(surveyService.getPage(page, groupId, shared));
   }
 
   @GetMapping("/{id}")
-  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
   public ResponseEntity<SurveyDetailResponse> getDetail(
           @PathVariable UUID id
   ) {
@@ -58,7 +57,6 @@ public class SurveyController {
   }
 
   @PostMapping
-  @PreAuthorize("hasAuthority('survey_create')")
   public ResponseEntity<SurveyResponse> create(
           @Valid @RequestBody CreateSurveyRequest request,
           HttpServletRequest httpRequest
@@ -87,7 +85,6 @@ public class SurveyController {
   }
 
   @PutMapping("/{id}")
-  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
   public ResponseEntity<SurveyResponse> update(
           @PathVariable UUID id,
           @Valid @RequestBody UpdateSurveyRequest request
@@ -98,7 +95,6 @@ public class SurveyController {
   }
 
   @PutMapping("/{id}/status")
-  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
   public ResponseEntity<SurveyResponse> updateStatus(
           @PathVariable UUID id,
           @Valid @RequestBody UpdateSurveyStatusRequest request
@@ -112,7 +108,6 @@ public class SurveyController {
   }
 
   @DeleteMapping("/{id}")
-  @PreAuthorize("hasAnyAuthority('survey_delete', 'survey_delete_all')")
   public ResponseEntity<Map<String, String>> delete(
           @PathVariable UUID id
   ) {
@@ -124,5 +119,13 @@ public class SurveyController {
                     "Đã xóa"
             )
     );
+  }
+
+  public record MoveRequest(UUID groupId) {}
+
+  @PutMapping("/{id}/group")
+  public ResponseEntity<Void> move(@PathVariable UUID id, @RequestBody MoveRequest request) {
+    surveyService.move(id, request == null ? null : request.groupId());
+    return ResponseEntity.noContent().build();
   }
 }

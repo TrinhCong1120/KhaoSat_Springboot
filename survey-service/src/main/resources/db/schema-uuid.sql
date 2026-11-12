@@ -299,12 +299,17 @@ CREATE TABLE public.users (
     password_hash character varying(255) NOT NULL,
     username character varying(255) NOT NULL,
     telegram_chat_id bigint,
+    zalo_chat_id character varying(100),
     id uuid DEFAULT gen_random_uuid() NOT NULL
 );
 
 CREATE UNIQUE INDEX users_telegram_chat_id_unique
     ON public.users (telegram_chat_id)
     WHERE telegram_chat_id IS NOT NULL;
+
+CREATE UNIQUE INDEX users_zalo_chat_id_unique
+    ON public.users (zalo_chat_id)
+    WHERE zalo_chat_id IS NOT NULL;
 
 
 

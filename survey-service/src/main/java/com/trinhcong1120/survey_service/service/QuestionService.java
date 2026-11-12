@@ -6,12 +6,14 @@ import com.trinhcong1120.survey_service.dto.media.MediaUploadResponse;
 import com.trinhcong1120.survey_service.dto.question.*;
 import com.trinhcong1120.survey_service.entity.*;
 import com.trinhcong1120.survey_service.entity.Option;
+import com.trinhcong1120.survey_service.exception.BadRequestException;
 import com.trinhcong1120.survey_service.exception.NotFoundException;
 import com.trinhcong1120.survey_service.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -27,6 +29,7 @@ public class QuestionService {
   private final SurveyRepository surveyRepository;
   private final MediaFileRepository mediaFileRepository;
   private final QuestionValidationRuleService questionValidationRuleService;
+  private final GoogleFormsService googleFormsService;
 
   public QuestionService(
           QuestionRepository questionRepository,
@@ -37,7 +40,8 @@ public class QuestionService {
           AnswerOptionRepository answerOptionRepository,
           SurveyRepository surveyRepository,
           MediaFileRepository mediaFileRepository,
-          QuestionValidationRuleService questionValidationRuleService
+          QuestionValidationRuleService questionValidationRuleService,
+          GoogleFormsService googleFormsService
   ) {
     this.questionRepository = questionRepository;
     this.guard = guard;
@@ -48,6 +52,7 @@ public class QuestionService {
     this.surveyRepository = surveyRepository;
     this.mediaFileRepository = mediaFileRepository;
     this.questionValidationRuleService = questionValidationRuleService;
+    this.googleFormsService = googleFormsService;
   }
 
   @Transactional(readOnly = true)
@@ -83,6 +88,28 @@ public class QuestionService {
     question.setOrderIndex(request.getOrderIndex());
     question.setDescription(request.getDescription());
 
+    if (request.getParentId() != null) {
+      Question parent = questionRepository.findById(request.getParentId())
+              .orElseThrow(() -> new NotFoundException("Parent question không tồn tại"));
+      question.setParent(parent);
+      int parentLevel = parent.getLevel() != null ? parent.getLevel() : 1;
+      question.setLevel(parentLevel + 1);
+      question.setPath((parent.getPath() == null || parent.getPath().isBlank() ? "" : parent.getPath() + "/") + parent.getId());
+      if (Boolean.TRUE.equals(parent.getIsLeaf())) {
+        parent.setIsLeaf(false);
+        questionRepository.save(parent);
+      }
+    } else {
+      question.setParent(null);
+      question.setLevel(1);
+      question.setPath("");
+    }
+    question.setIsLeaf(true);
+    question.setAggregationType(request.getAggregationType() != null ? request.getAggregationType() : "NONE");
+    question.setAggregationFormula(request.getAggregationFormula());
+    question.setWeight(request.getWeight() != null ? request.getWeight() : java.math.BigDecimal.ONE);
+    question.setMatrixConfig(request.getMatrixConfig());
+
     question = questionRepository.save(question);
 
     if (isChoice(type.getCode())
@@ -92,6 +119,14 @@ public class QuestionService {
     }
 
     bumpRevision(question);
+
+    Survey survey = page.getSurvey();
+    if (survey != null) {
+      List<Option> opts = isChoice(type.getCode())
+              ? optionRepository.findByQuestion_IdOrderByOrderIndexAsc(question.getId())
+              : Collections.emptyList();
+      googleFormsService.syncQuestionCreated(survey, question, opts);
+    }
 
     return toResponse(question);
   }
@@ -118,6 +153,33 @@ public class QuestionService {
     question.setOrderIndex(request.getOrderIndex());
     question.setDescription(request.getDescription());
 
+    if (request.getParentId() != null) {
+      if (request.getParentId().equals(question.getId())) {
+        throw new BadRequestException("Question không thể là cha của chính mình");
+      }
+      Question parent = questionRepository.findById(request.getParentId())
+              .orElseThrow(() -> new NotFoundException("Parent question không tồn tại"));
+      if (parent.getPath() != null && parent.getPath().contains(question.getId().toString())) {
+        throw new BadRequestException("Phát hiện tham chiếu vòng lặp giữa các câu hỏi cha con");
+      }
+      question.setParent(parent);
+      int parentLevel = parent.getLevel() != null ? parent.getLevel() : 1;
+      question.setLevel(parentLevel + 1);
+      question.setPath((parent.getPath() == null || parent.getPath().isBlank() ? "" : parent.getPath() + "/") + parent.getId());
+      if (Boolean.TRUE.equals(parent.getIsLeaf())) {
+        parent.setIsLeaf(false);
+        questionRepository.save(parent);
+      }
+    } else {
+      question.setParent(null);
+      question.setLevel(1);
+      question.setPath("");
+    }
+    question.setAggregationType(request.getAggregationType() != null ? request.getAggregationType() : "NONE");
+    question.setAggregationFormula(request.getAggregationFormula());
+    question.setWeight(request.getWeight() != null ? request.getWeight() : java.math.BigDecimal.ONE);
+    question.setMatrixConfig(request.getMatrixConfig());
+
     questionRepository.save(question);
 
     if (isChoice(type.getCode())) {
@@ -129,6 +191,14 @@ public class QuestionService {
     questionRepository.save(question);
     bumpRevision(question);
 
+    Survey survey = question.getPage() != null ? question.getPage().getSurvey() : null;
+    if (survey != null) {
+      List<Option> opts = isChoice(type.getCode())
+              ? optionRepository.findByQuestion_IdOrderByOrderIndexAsc(question.getId())
+              : Collections.emptyList();
+      googleFormsService.syncQuestionUpdated(survey, question, opts);
+    }
+
     return toResponse(question);
   }
 
@@ -138,6 +208,11 @@ public class QuestionService {
             .orElseThrow(() ->
                     new NotFoundException(
                             "Question không tồn tại"));
+
+    Survey survey = question.getPage() != null ? question.getPage().getSurvey() : null;
+    if (survey != null) {
+      googleFormsService.syncQuestionDeleted(survey, question.getId());
+    }
 
     List<Option> options =
             optionRepository
@@ -318,6 +393,15 @@ public class QuestionService {
             questionValidationRuleService.getByQuestion(question.getId())
     );
     response.setMediaFiles(toMediaResponses("QUESTION", question.getId()));
+
+    response.setParentId(question.getParent() != null ? question.getParent().getId() : null);
+    response.setLevel(question.getLevel());
+    response.setPath(question.getPath());
+    response.setIsLeaf(question.getIsLeaf());
+    response.setAggregationType(question.getAggregationType());
+    response.setAggregationFormula(question.getAggregationFormula());
+    response.setWeight(question.getWeight());
+    response.setMatrixConfig(question.getMatrixConfig());
 
     return response;
   }

@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/Reports")
-@PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
+
 public class ReportController {
 
   private static final MediaType XLSX =
@@ -48,7 +48,7 @@ public class ReportController {
       @RequestParam(required = false) Instant from,
       @RequestParam(required = false) Instant to,
       @RequestParam(defaultValue = "AUTO") String bucket) {
-    accessGuard.view(surveyId);
+    accessGuard.viewResponses(surveyId);
     return dashboardService.report(surveyId, from, to, bucket);
   }
 
@@ -60,6 +60,16 @@ public class ReportController {
             statisticsService.getStatistics(
                     surveyId
             )
+    );
+  }
+
+  @GetMapping("/survey/{surveyId}/dataset")
+  public ResponseEntity<com.trinhcong1120.survey_service.dto.report.SurveyDatasetResponse> getSurveyDataset(
+          @PathVariable UUID surveyId,
+          @RequestParam(defaultValue = "false") boolean includePii
+  ) {
+    return ResponseEntity.ok(
+            reportService.getSurveyDataset(surveyId, includePii)
     );
   }
 

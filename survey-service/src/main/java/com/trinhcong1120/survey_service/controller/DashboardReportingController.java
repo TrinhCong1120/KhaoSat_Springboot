@@ -1,11 +1,14 @@
 package com.trinhcong1120.survey_service.controller;
 
+import com.trinhcong1120.survey_service.entity.Survey;
+import com.trinhcong1120.survey_service.security.SurveyAccessGuard;
 import com.trinhcong1120.survey_service.service.DashboardReportingService;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -20,15 +23,35 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/Dashboard")
-@PreAuthorize("hasAuthority('dashboard_view')")
+@PreAuthorize("hasAuthority('dashboard_view') or hasAuthority('survey_view')")
 public class DashboardReportingController {
   private final DashboardReportingService reporting;
-  public DashboardReportingController(DashboardReportingService reporting) { this.reporting = reporting; }
+  private final SurveyAccessGuard guard;
+
+  public DashboardReportingController(DashboardReportingService reporting, SurveyAccessGuard guard) {
+    this.reporting = reporting;
+    this.guard = guard;
+  }
+
+  private record ScopeInfo(boolean isScoped, List<UUID> ids, List<Survey> surveys) {}
+
+  private ScopeInfo resolveScope(String scope) {
+    boolean canSeeAll = guard.has("survey_view_all");
+    boolean wantAll = "all".equalsIgnoreCase(scope);
+    if (canSeeAll && (wantAll || "auto".equalsIgnoreCase(scope))) {
+      return new ScopeInfo(false, null, null);
+    }
+    List<Survey> visible = guard.visibleSurveys();
+    List<UUID> ids = visible.stream().map(Survey::getId).toList();
+    return new ScopeInfo(true, ids, visible);
+  }
 
   @GetMapping("/report")
   public Map<String,Object> report(@RequestParam(required=false) Instant from,
-      @RequestParam(required=false) Instant to, @RequestParam(defaultValue="AUTO") String bucket) {
-    return reporting.report(reporting.period(from,to,bucket));
+      @RequestParam(required=false) Instant to, @RequestParam(defaultValue="AUTO") String bucket,
+      @RequestParam(required=false, defaultValue="auto") String scope) {
+    ScopeInfo s = resolveScope(scope);
+    return reporting.report(reporting.period(from,to,bucket), s.ids(), s.surveys());
   }
 
   @GetMapping("/surveys")
@@ -36,15 +59,19 @@ public class DashboardReportingController {
       @RequestParam(required=false) Instant to, @RequestParam(defaultValue="AUTO") String bucket,
       @RequestParam(required=false) String search, @RequestParam(required=false) String status,
       @RequestParam(defaultValue="submissions") String sort,
-      @RequestParam(defaultValue="1") int page, @RequestParam(defaultValue="20") int size) {
-    return reporting.surveyRows(reporting.period(from,to,bucket),search,status,sort,page,size);
+      @RequestParam(defaultValue="1") int page, @RequestParam(defaultValue="20") int size,
+      @RequestParam(required=false, defaultValue="auto") String scope) {
+    ScopeInfo s = resolveScope(scope);
+    return reporting.surveyRows(reporting.period(from,to,bucket),search,status,sort,page,size, s.ids(), s.surveys());
   }
 
   @GetMapping("/surveys.xlsx")
   public ResponseEntity<byte[]> export(@RequestParam(required=false) Instant from,
       @RequestParam(required=false) Instant to, @RequestParam(defaultValue="AUTO") String bucket,
       @RequestParam(required=false) String search, @RequestParam(required=false) String status,
-      @RequestParam(defaultValue="submissions") String sort) throws IOException {
+      @RequestParam(defaultValue="submissions") String sort,
+      @RequestParam(required=false, defaultValue="auto") String scope) throws IOException {
+    ScopeInfo s = resolveScope(scope);
     var period = reporting.period(from,to,bucket);
     try (var workbook = new XSSFWorkbook(); var out = new ByteArrayOutputStream()) {
       Sheet sheet = workbook.createSheet("So sanh khao sat");
@@ -57,7 +84,7 @@ public class DashboardReportingController {
       for (int i=0;i<headers.length;i++) head.createCell(i).setCellValue(headers[i]);
       int rowNumber = 1, page = 1;
       while (true) {
-        Map<String,Object> batch = reporting.surveyRows(period,search,status,sort,page++,100);
+        Map<String,Object> batch = reporting.surveyRows(period,search,status,sort,page++,100, s.ids(), s.surveys());
         @SuppressWarnings("unchecked") List<Map<String,Object>> rows = (List<Map<String,Object>>) batch.get("rows");
         for (Map<String,Object> data : rows) {
           Row line = sheet.createRow(rowNumber++);

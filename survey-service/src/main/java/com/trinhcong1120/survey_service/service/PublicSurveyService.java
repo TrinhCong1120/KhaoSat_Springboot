@@ -48,6 +48,7 @@ public class PublicSurveyService {
   private final TransactionTemplate transactionTemplate;
   private final SurveyScheduleService schedule;
   private final SurveyTrackingService tracking;
+  private final AggregationEngineService aggregationEngineService;
 
   public PublicSurveyService(
           SurveyRepository surveyRepository,
@@ -68,7 +69,7 @@ public class PublicSurveyService {
     this(surveyRepository, pageRepository, questionRepository, optionRepository,
         conditionRepository, responseRepository, answerRepository, answerOptionRepository,
         mediaFileRepository, answerValidationService, questionValidationRuleService,
-        objectMapper, transactionTemplate, schedule, null);
+        objectMapper, transactionTemplate, schedule, null, null);
   }
 
   @org.springframework.beans.factory.annotation.Autowired
@@ -87,7 +88,8 @@ public class PublicSurveyService {
           ObjectMapper objectMapper,
           TransactionTemplate transactionTemplate,
           SurveyScheduleService schedule,
-          SurveyTrackingService tracking
+          SurveyTrackingService tracking,
+          AggregationEngineService aggregationEngineService
   ) {
     this.surveyRepository = surveyRepository;
     this.pageRepository = pageRepository;
@@ -104,6 +106,7 @@ public class PublicSurveyService {
     this.transactionTemplate = transactionTemplate;
     this.schedule = schedule;
     this.tracking = tracking;
+    this.aggregationEngineService = aggregationEngineService;
   }
 
   @Transactional(readOnly = true)
@@ -144,11 +147,12 @@ public class PublicSurveyService {
     Set<UUID> excluded = ConditionUtil.unreachableShowTargets(conditions, openPageIds);
     response.getPages().forEach(p -> p.setQuestions(p.getQuestions().stream()
             .filter(q -> !excluded.contains(q.getId())).toList()));
-    response.setConditions(conditions.stream().filter(this::hasConditionQuestions)
-            .filter(c -> openPageIds.contains(c.getSourceQuestion().getPage().getId())
-                    && openPageIds.contains(c.getTargetQuestion().getPage().getId())
+    response.setConditions(conditions.stream().filter(this::hasConditionTargets)
+            .filter(c -> c.getSourceQuestion().getPage() != null
+                    && openPageIds.contains(c.getSourceQuestion().getPage().getId())
+                    && (c.getTargetQuestion() != null ? (c.getTargetQuestion().getPage() != null && openPageIds.contains(c.getTargetQuestion().getPage().getId())) : openPageIds.contains(c.getTargetPage().getId()))
                     && !excluded.contains(c.getSourceQuestion().getId())
-                    && !excluded.contains(c.getTargetQuestion().getId()))
+                    && (c.getTargetQuestion() == null || !excluded.contains(c.getTargetQuestion().getId())))
             .map(this::toConditionResponse).toList());
 
     return response;
@@ -201,6 +205,17 @@ public class PublicSurveyService {
         if (request.getSurveyRevision() == null || !Objects.equals(request.getSurveyRevision(), survey.getValidationRevision()))
           throw new SurveyApiException("SURVEY_REVISION_CONFLICT", HttpStatus.CONFLICT, "Du lieu khao sat da thay doi, vui long tai lai");
         List<SubmitAnswerRequest> answers = answerValidationService.validateAndFilter(surveyId, request.getAnswers(), pageIds);
+        if (aggregationEngineService != null) {
+          List<Question> allQuestions = questionRepository.findByPage_Survey_Id(surveyId);
+          Map<UUID, SubmitAnswerRequest> answerMap = new LinkedHashMap<>();
+          for (SubmitAnswerRequest a : answers) {
+            if (a != null && a.getQuestionId() != null) {
+              answerMap.put(a.getQuestionId(), a);
+            }
+          }
+          aggregationEngineService.calculateAggregations(allQuestions, answerMap);
+          answers = new ArrayList<>(answerMap.values());
+        }
         if (request.getSessionId() != null) tracking.verifySession(surveyId, request.getSessionId());
         int[] questionCounts = countQuestionCompleteness(surveyId, pageIds, answers);
         Response saved = doSaveResponse(survey, request, requestId, answers);
@@ -338,6 +353,7 @@ public class PublicSurveyService {
       answer.setProvince(item.getProvince());
       answer.setWard(item.getWard());
       answer.setAddressDetail(item.getAddressDetail());
+      answer.setMatrixData(item.getMatrixData());
 
       answer = answerRepository.save(answer);
 
@@ -826,10 +842,21 @@ public class PublicSurveyService {
   }
 
   private List<QuestionResponse> toQuestionResponses(UUID pageId) {
-    return questionRepository.findByPage_IdOrderByOrderIndexAsc(pageId)
+    List<QuestionResponse> flat = questionRepository.findByPage_IdOrderByOrderIndexAsc(pageId)
             .stream()
             .map(this::toQuestionResponse)
             .toList();
+
+    Map<UUID, QuestionResponse> map = new LinkedHashMap<>();
+    for (QuestionResponse q : flat) {
+      map.put(q.getId(), q);
+    }
+    for (QuestionResponse q : flat) {
+      if (q.getParentId() != null && map.containsKey(q.getParentId())) {
+        map.get(q.getParentId()).getChildren().add(q);
+      }
+    }
+    return flat;
   }
 
   private QuestionResponse toQuestionResponse(Question question) {
@@ -850,6 +877,15 @@ public class PublicSurveyService {
             questionValidationRuleService.getByQuestion(question.getId())
     );
     response.setMediaFiles(toMediaResponses("QUESTION", question.getId()));
+
+    response.setParentId(question.getParent() != null ? question.getParent().getId() : null);
+    response.setLevel(question.getLevel());
+    response.setPath(question.getPath());
+    response.setIsLeaf(question.getIsLeaf());
+    response.setAggregationType(question.getAggregationType());
+    response.setAggregationFormula(question.getAggregationFormula());
+    response.setWeight(question.getWeight());
+    response.setMatrixConfig(question.getMatrixConfig());
 
     return response;
   }
@@ -879,22 +915,24 @@ public class PublicSurveyService {
                     surveyId
             )
             .stream()
-            .filter(this::hasConditionQuestions)
+            .filter(this::hasConditionTargets)
             .map(this::toConditionResponse)
             .toList();
   }
 
-  private boolean hasConditionQuestions(Condition condition) {
-    return condition.getSourceQuestion() != null
-            && condition.getTargetQuestion() != null;
+  private boolean hasConditionTargets(Condition condition) {
+    return condition != null && condition.getSourceQuestion() != null
+            && (condition.getTargetQuestion() != null || condition.getTargetPage() != null);
   }
 
   private ConditionResponse toConditionResponse(Condition condition) {
     return new ConditionResponse(
             condition.getId(),
-            condition.getSourceQuestion().getId(),
+            condition.getSourceQuestion() != null ? condition.getSourceQuestion().getId() : null,
             condition.getSourceValue(),
-            condition.getTargetQuestion().getId(),
+            condition.getTargetType(),
+            condition.getTargetQuestion() != null ? condition.getTargetQuestion().getId() : null,
+            condition.getTargetPage() != null ? condition.getTargetPage().getId() : null,
             condition.getAction()
     );
   }

@@ -188,8 +188,15 @@ public class FailedSurveyService {
       );
     }
 
-    String fileName =
-            file.getOriginalFilename();
+    try {
+      return importBytes(file.getOriginalFilename(), file.getBytes());
+    } catch (IOException e) {
+      throw new BadRequestException("Cannot read JSON file");
+    }
+  }
+
+  public ImportFailedSurveyResponse importBytes(String fileName, byte[] bytes) {
+    if (bytes == null || bytes.length == 0) throw new BadRequestException("File is empty");
 
     if (fileName == null
             || !fileName.toLowerCase()
@@ -206,7 +213,7 @@ public class FailedSurveyService {
 
       records =
               objectMapper.readValue(
-                      file.getBytes(),
+                      bytes,
                       new TypeReference<List<JsonNode>>() {
                       }
               );

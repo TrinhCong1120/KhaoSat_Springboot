@@ -1,17 +1,71 @@
 {
   "version": 1,
   "skills": {
+    "agentation": {
+      "source": "benjitaylor/agentation",
+      "sourceType": "github",
+      "skillPath": "skills/agentation/SKILL.md",
+      "computedHash": "25951380db60f312979ce4e7940c2999eb6a806c3780c2a6359f17fbd17f0e86"
+    },
+    "agents-progressive-disclosure": {
+      "source": "caph-dev/agents-progressive-disclosure",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "bdf938a39d6290a4dba1951a3016b9dc8e7e4cacbc682e79eaf4278e46ce1e7a"
+    },
+    "browser-testing": {
+      "source": "roundpilot/superpowers-antigravity",
+      "sourceType": "github",
+      "skillPath": "skills/browser-testing/SKILL.md",
+      "computedHash": "ecada344281b8494448284cfd74628618916a92fa6a99368d2102bebd644fbdd"
+    },
+    "docs-architect": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/docs-architect/SKILL.md",
+      "computedHash": "f4a18641ce436bc0824c7b58bcace163cdec5efa14ff0f38249cbb9123a25bb6"
+    },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",
       "skillPath": "skills/find-skills/SKILL.md",
       "computedHash": "b146008599c31057cef1c145774cea5d5afb30e8f43fa802e47a4b461419aaaf"
     },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "106acf230014cbb43ca34e6410371321b56ca742f9ee0442e8ec05bf02eb0384"
+    },
+    "gitnexus-impact-analysis": {
+      "source": "abhigyanpatwari/gitnexus",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/gitnexus-impact-analysis/SKILL.md",
+      "computedHash": "d6ace277fa33fe1de02f32ad03c8e6ef2a16657c31a2b3680f42488cb42050c8"
+    },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/impeccable/SKILL.md",
+      "computedHash": "1862731c18a1cc31dd819e44731d0dbc158a16ff4c0f8dde580314e826c44eef"
+    },
     "ponytail": {
-      "source": "dietrichgebert/ponytail",
+      "source": "DietrichGebert/ponytail",
       "sourceType": "github",
       "skillPath": "skills/ponytail/SKILL.md",
       "computedHash": "9e8d05cbbaf6dc38f0cffc924c09b3cbe76d94ba4ba0d09bde803da2f8c6b5a0"
+    },
+    "telegram-bot": {
+      "source": "claude-office-skills/skills",
+      "sourceType": "github",
+      "skillPath": "telegram-bot/SKILL.md",
+      "computedHash": "987517b2bf10b114c441a15939e2e31dce3890f826e42d0a52efdba20270c3ce"
+    },
+    "token-efficient-workflow": {
+      "source": "luziyezz/codex-skills",
+      "sourceType": "github",
+      "skillPath": "token-efficient-workflow/SKILL.md",
+      "computedHash": "c910237929ca3aeb9c75cfbc4e5e1093bb4d6a6867255d8e1764c8df745072f3"
     }
   }
 }

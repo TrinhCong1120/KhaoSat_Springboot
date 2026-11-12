@@ -28,8 +28,8 @@ class SurveyAccessControllerPermissionTest {
   static class Config {
     @Bean SurveyAccessGuard surveyAccessGuard() { return mock(SurveyAccessGuard.class); }
     @Bean SurveyAccessService accessService() { return mock(SurveyAccessService.class); }
-    @Bean SurveyAccessController accessController(SurveyAccessService service) {
-      return new SurveyAccessController(service);
+    @Bean SurveyAccessController accessController(SurveyAccessService service, SurveyAccessGuard guard) {
+      return new SurveyAccessController(service, guard);
     }
   }
 
@@ -51,7 +51,10 @@ class SurveyAccessControllerPermissionTest {
     controller.list(surveyId);
     verify(service).list(surveyId);
 
+    assertThrows(AccessDeniedException.class, () -> controller.changeOwner(surveyId, null));
+
     authenticate("survey_update_all");
+    when(guard.has("survey_update_all")).thenReturn(true);
     controller.changeOwner(surveyId, null);
     verify(service).changeOwner(surveyId, null);
   }

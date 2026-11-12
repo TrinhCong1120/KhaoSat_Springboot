@@ -5,6 +5,7 @@ import java.util.UUID;
 import com.trinhcong1120.survey_service.entity.Answer;
 import com.trinhcong1120.survey_service.entity.AnswerOption;
 import com.trinhcong1120.survey_service.entity.Condition;
+import com.trinhcong1120.survey_service.entity.Page;
 import com.trinhcong1120.survey_service.entity.Question;
 
 import java.time.format.DateTimeFormatter;
@@ -15,16 +16,16 @@ public final class ConditionUtil {
 
   public static Set<UUID> unreachableShowTargets(List<Condition> conditions, Set<UUID> openPageIds) {
     List<Condition> shows = conditions.stream()
-        .filter(c -> c.getSourceQuestion() != null && c.getTargetQuestion() != null)
+        .filter(c -> c.getSourceQuestion() != null && (c.getTargetQuestion() != null || c.getTargetPage() != null))
         .filter(c -> "SHOW".equalsIgnoreCase(c.getAction())).toList();
     Set<UUID> excluded = new HashSet<>();
     boolean changed;
     do {
       changed = false;
-      for (UUID targetId : shows.stream().map(c -> c.getTargetQuestion().getId()).distinct().toList()) {
+      for (UUID targetId : shows.stream().filter(c -> c.getTargetQuestion() != null).map(c -> c.getTargetQuestion().getId()).distinct().toList()) {
         List<Condition> targetShows = shows.stream()
-            .filter(c -> targetId.equals(c.getTargetQuestion().getId())).toList();
-        if (targetShows.stream().allMatch(c -> !openPageIds.contains(c.getSourceQuestion().getPage().getId())
+            .filter(c -> c.getTargetQuestion() != null && targetId.equals(c.getTargetQuestion().getId())).toList();
+        if (targetShows.stream().allMatch(c -> c.getSourceQuestion().getPage() == null || !openPageIds.contains(c.getSourceQuestion().getPage().getId())
             || excluded.contains(c.getSourceQuestion().getId())))
           changed |= excluded.add(targetId);
       }
@@ -43,11 +44,27 @@ public final class ConditionUtil {
           Map<UUID, Answer> answerMap,
           List<Condition> conditions
   ) {
-
     return isApplicable(
             question,
             answerMap,
             conditions,
+            new HashMap<>(),
+            new HashMap<>(),
+            new HashSet<>(),
+            new HashSet<>()
+    );
+  }
+
+  public static boolean isPageApplicable(
+          Page page,
+          Map<UUID, Answer> answerMap,
+          List<Condition> conditions
+  ) {
+    return isPageApplicable(
+            page,
+            answerMap,
+            conditions,
+            new HashMap<>(),
             new HashMap<>(),
             new HashSet<>()
     );
@@ -63,13 +80,10 @@ public final class ConditionUtil {
             new HashMap<>();
 
     if (answers != null) {
-
       for (Answer answer : answers) {
-
         if (answer == null
                 || answer.getQuestion() == null
                 || answer.getQuestion().getId() == null) {
-
           continue;
         }
 
@@ -80,15 +94,14 @@ public final class ConditionUtil {
       }
     }
 
-    Map<UUID, Boolean> cache =
-            new HashMap<>();
+    Map<UUID, Boolean> questionCache = new HashMap<>();
+    Map<UUID, Boolean> pageCache = new HashMap<>();
 
     if (questions == null) {
-      return cache;
+      return questionCache;
     }
 
     for (Question question : questions) {
-
       if (question == null
               || question.getId() == null) {
         continue;
@@ -99,38 +112,135 @@ public final class ConditionUtil {
                       question,
                       answerMap,
                       conditions,
-                      cache,
+                      questionCache,
+                      pageCache,
+                      new HashSet<>(),
                       new HashSet<>()
               );
 
-      cache.put(
+      questionCache.put(
               question.getId(),
               applicable
       );
     }
 
-    return cache;
+    return questionCache;
+  }
+
+  public static boolean isPageApplicable(
+          Page page,
+          Map<UUID, Answer> answerMap,
+          List<Condition> conditions,
+          Map<UUID, Boolean> pageCache,
+          Map<UUID, Boolean> questionCache,
+          Set<UUID> visiting
+  ) {
+    if (page == null || page.getId() == null) {
+      return true;
+    }
+    UUID pageId = page.getId();
+    if (pageCache.containsKey(pageId)) {
+      return pageCache.get(pageId);
+    }
+    if (!visiting.add(pageId)) {
+      return false;
+    }
+
+    List<Condition> targetConditions = conditions == null
+        ? List.of()
+        : conditions.stream()
+            .filter(c -> c != null && c.getTargetPage() != null && Objects.equals(c.getTargetPage().getId(), pageId))
+            .toList();
+
+    if (targetConditions.isEmpty()) {
+      visiting.remove(pageId);
+      pageCache.put(pageId, true);
+      return true;
+    }
+
+    boolean hasShowCondition = false;
+    boolean matchedShow = false;
+    boolean matchedHide = false;
+
+    for (Condition condition : targetConditions) {
+      Question source = condition.getSourceQuestion();
+      if (source == null || source.getId() == null) {
+        continue;
+      }
+
+      boolean sourceApplicable = isApplicable(
+              source,
+              answerMap,
+              conditions,
+              questionCache,
+              pageCache,
+              new HashSet<>(),
+              new HashSet<>()
+      );
+
+      String action = normalizeAction(condition.getAction());
+      if ("SHOW".equals(action)) {
+        hasShowCondition = true;
+      }
+
+      if (!sourceApplicable) {
+        continue;
+      }
+
+      Answer sourceAnswer = answerMap.get(source.getId());
+      boolean matched = matches(condition, source, sourceAnswer);
+
+      if (!matched) {
+        continue;
+      }
+
+      if ("HIDE".equals(action)) {
+        matchedHide = true;
+      }
+      if ("SHOW".equals(action)) {
+        matchedShow = true;
+      }
+    }
+
+    boolean result;
+    if (matchedHide) {
+      result = false;
+    } else if (hasShowCondition) {
+      result = matchedShow;
+    } else {
+      result = true;
+    }
+
+    visiting.remove(pageId);
+    pageCache.put(pageId, result);
+    return result;
   }
 
   private static boolean isApplicable(
           Question question,
           Map<UUID, Answer> answerMap,
           List<Condition> conditions,
-          Map<UUID, Boolean> cache,
-          Set<UUID> visiting
+          Map<UUID, Boolean> questionCache,
+          Map<UUID, Boolean> pageCache,
+          Set<UUID> questionVisiting,
+          Set<UUID> pageVisiting
   ) {
 
     if (question == null
             || question.getId() == null) {
-
       return true;
     }
 
-    UUID questionId =
-            question.getId();
+    UUID questionId = question.getId();
 
-    if (cache.containsKey(questionId)) {
-      return cache.get(questionId);
+    if (questionCache.containsKey(questionId)) {
+      return questionCache.get(questionId);
+    }
+
+    // 1. Kiểm tra điều kiện Trang trước: Nếu trang bị ẩn, toàn bộ câu hỏi trong trang tự động không khả dụng
+    if (question.getPage() != null && !isPageApplicable(question.getPage(), answerMap, conditions, pageCache, questionCache, pageVisiting)) {
+      questionCache.put(questionId, false);
+      return false;
     }
 
     /*
@@ -139,7 +249,7 @@ public final class ConditionUtil {
      * A -> B
      * B -> A
      */
-    if (!visiting.add(questionId)) {
+    if (!questionVisiting.add(questionId)) {
       return false;
     }
 
@@ -165,10 +275,8 @@ public final class ConditionUtil {
      * => mặc định hiển thị.
      */
     if (targetConditions.isEmpty()) {
-
-      visiting.remove(questionId);
-      cache.put(questionId, true);
-
+      questionVisiting.remove(questionId);
+      questionCache.put(questionId, true);
       return true;
     }
 
@@ -184,7 +292,6 @@ public final class ConditionUtil {
 
       if (source == null
               || source.getId() == null) {
-
         continue;
       }
 
@@ -197,8 +304,10 @@ public final class ConditionUtil {
                       source,
                       answerMap,
                       conditions,
-                      cache,
-                      visiting
+                      questionCache,
+                      pageCache,
+                      questionVisiting,
+                      pageVisiting
               );
 
       String action =
@@ -245,47 +354,31 @@ public final class ConditionUtil {
     boolean result;
 
     if (matchedHide) {
-
       result = false;
-
     } else if (hasShowCondition) {
-
       /*
        * Có SHOW condition:
        * chỉ hiển thị khi ít nhất
        * một SHOW condition match.
        */
       result = matchedShow;
-
     } else {
-
-      /*
-       * Chỉ có HIDE condition
-       * nhưng không cái nào match.
-       */
       result = true;
     }
 
-    visiting.remove(questionId);
-
-    cache.put(
-            questionId,
-            result
-    );
+    questionVisiting.remove(questionId);
+    questionCache.put(questionId, result);
 
     return result;
   }
 
-  public static boolean matches(
+  private static boolean matches(
           Condition condition,
-          Question sourceQuestion,
+          Question source,
           Answer sourceAnswer
   ) {
 
-    if (condition == null
-            || sourceQuestion == null
-            || sourceAnswer == null) {
-
+    if (sourceAnswer == null) {
       return false;
     }
 
@@ -298,24 +391,15 @@ public final class ConditionUtil {
       return false;
     }
 
-    String type = "";
+    String typeCode =
+            source.getQuestionType() == null
+                    ? ""
+                    : source.getQuestionType()
+                    .getCode();
 
-    if (sourceQuestion.getQuestionType() != null
-            && sourceQuestion
-            .getQuestionType()
-            .getCode() != null) {
+    return switch (typeCode) {
 
-      type = sourceQuestion
-              .getQuestionType()
-              .getCode()
-              .trim()
-              .toUpperCase();
-    }
-
-    return switch (type) {
-
-      case "SINGLE_CHOICE",
-           "MULTIPLE_CHOICE" ->
+      case "SINGLE_CHOICE", "MULTIPLE_CHOICE" ->
               matchChoice(
                       sourceAnswer,
                       expectedValues
@@ -367,7 +451,6 @@ public final class ConditionUtil {
               || answerOption
               .getOption()
               .getId() == null) {
-
         continue;
       }
 
@@ -409,7 +492,6 @@ public final class ConditionUtil {
             expectedValues) {
 
       try {
-
         BigDecimal value =
                 new BigDecimal(expected);
 
@@ -475,13 +557,11 @@ public final class ConditionUtil {
 
       if (province != null
               && province.equalsIgnoreCase(value)) {
-
         return true;
       }
 
       if (ward != null
               && ward.equalsIgnoreCase(value)) {
-
         return true;
       }
     }
@@ -520,7 +600,6 @@ public final class ConditionUtil {
 
     if (sourceValue == null
             || sourceValue.isBlank()) {
-
       return List.of();
     }
 

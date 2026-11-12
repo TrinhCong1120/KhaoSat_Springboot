@@ -28,7 +28,7 @@ public class MediaController {
   }
 
   @PostMapping("/presigned-url")
-  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
+
   public ResponseEntity<PresignedUploadResponse> createPresignedUpload(
           @Valid @RequestBody CreatePresignedUploadRequest request,
           HttpServletRequest httpRequest
@@ -44,7 +44,7 @@ public class MediaController {
   }
 
   @PostMapping("/complete")
-  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
+
   public ResponseEntity<MediaUploadResponse> completeUpload(
           @Valid @RequestBody CompleteMediaUploadRequest request
   ) {
@@ -54,7 +54,7 @@ public class MediaController {
   }
 
   @PostMapping
-  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
+
   public ResponseEntity<MediaUploadResponse> addMedia(
           @Valid @RequestBody CompleteMediaUploadRequest request
   ) {
@@ -64,7 +64,7 @@ public class MediaController {
   }
 
   @GetMapping
-  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
+
   public ResponseEntity<List<MediaUploadResponse>> getByOwner(
           @RequestParam String ownerType,
           @RequestParam UUID ownerId
@@ -78,7 +78,7 @@ public class MediaController {
   }
 
   @DeleteMapping("/{id}")
-  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
+
   public ResponseEntity<Map<String, Object>> deleteMedia(
           @PathVariable UUID id
   ) {

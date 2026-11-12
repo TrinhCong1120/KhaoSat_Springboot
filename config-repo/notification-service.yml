@@ -46,6 +46,11 @@
       token: ${TELEGRAM_BOT_TOKEN:}
       webhook-url: ${TELEGRAM_WEBHOOK_URL:}
       webhook-secret: ${TELEGRAM_WEBHOOK_SECRET:}
+  zalo:
+    bot:
+      token: ${ZALO_BOT_TOKEN:}
+      webhook-url: ${ZALO_WEBHOOK_URL:}
+      webhook-secret: ${ZALO_WEBHOOK_SECRET:}
 
 server:
   port: 8083

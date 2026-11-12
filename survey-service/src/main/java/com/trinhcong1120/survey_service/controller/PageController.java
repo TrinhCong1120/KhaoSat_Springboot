@@ -23,7 +23,7 @@ public class PageController {
   }
 
   @GetMapping("/survey/{surveyId}")
-  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
+
   public ResponseEntity<List<PageResponse>> getBySurvey(
           @PathVariable UUID surveyId
   ) {
@@ -33,7 +33,7 @@ public class PageController {
   }
 
   @PostMapping
-  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
+
   public ResponseEntity<PageResponse> create(
           @Valid @RequestBody CreatePageRequest request
   ) {
@@ -43,7 +43,7 @@ public class PageController {
   }
 
   @PutMapping("/{id}")
-  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
+
   public ResponseEntity<PageResponse> update(
           @PathVariable UUID id,
           @Valid @RequestBody UpdatePageRequest request
@@ -54,7 +54,7 @@ public class PageController {
   }
 
   @DeleteMapping("/{id}")
-  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
+
   public ResponseEntity<Map<String, String>> delete(
           @PathVariable UUID id
   ) {

@@ -53,7 +53,7 @@ class ResponseServicePaginationTest {
 
     var result = service.getBySurvey(surveyId, 3, null);
 
-    verify(guard).view(surveyId);
+    verify(guard).viewResponses(surveyId);
     assertEquals(3, result.page());
     assertEquals(10, result.size());
     assertEquals(25, result.totalElements());

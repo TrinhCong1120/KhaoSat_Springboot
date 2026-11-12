@@ -76,7 +76,7 @@ public class ResponseService {
           int page,
           String query
   ) {
-    guard.view(surveyId);
+    guard.viewResponses(surveyId);
     return findPage(surveyId, null, query, page);
   }
 
@@ -86,7 +86,7 @@ public class ResponseService {
           int page,
           String query
   ) {
-    guard.view(surveyId);
+    guard.viewResponses(surveyId);
     return findPage(surveyId, request, query, page);
   }
 
@@ -412,6 +412,8 @@ public class ResponseService {
     result.setProvince(answer.getProvince());
     result.setWard(answer.getWard());
     result.setAddressDetail(answer.getAddressDetail());
+    result.setMatrixData(answer.getMatrixData());
+    result.setMatrixConfig(question.getMatrixConfig());
     result.setFormattedAnswer(
             AnswerValueUtil.formatAnswer(answer)
     );

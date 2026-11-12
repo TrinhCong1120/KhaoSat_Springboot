@@ -6,6 +6,7 @@ import com.trinhcong1120.survey_service.dto.dashboard.*;
 import com.trinhcong1120.survey_service.entity.*;
 import com.trinhcong1120.survey_service.entity.Response;
 import com.trinhcong1120.survey_service.repository.*;
+import com.trinhcong1120.survey_service.security.SurveyAccessGuard;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,7 @@ public class DashboardService {
   private final ResponseRepository responseRepository;
   private final AnswerRepository answerRepository;
   private final SurveyScheduleService schedule;
+  private final SurveyAccessGuard guard;
 
   public DashboardService(
           SurveyRepository surveyRepository,
@@ -29,7 +31,8 @@ public class DashboardService {
           QuestionRepository questionRepository,
           ResponseRepository responseRepository,
           AnswerRepository answerRepository,
-          SurveyScheduleService schedule
+          SurveyScheduleService schedule,
+          SurveyAccessGuard guard
   ) {
     this.surveyRepository = surveyRepository;
     this.pageRepository = pageRepository;
@@ -37,6 +40,7 @@ public class DashboardService {
     this.responseRepository = responseRepository;
     this.answerRepository = answerRepository;
     this.schedule = schedule;
+    this.guard = guard;
   }
 
   public DashboardResponse getDashboard() {
@@ -45,7 +49,7 @@ public class DashboardService {
             LocalDateTime.now();
 
     List<Survey> surveys =
-            surveyRepository.findAllByOrderByCreatedAtDesc();
+            guard.visibleSurveys();
 
     List<UUID> visibleIds = surveys.stream().map(Survey::getId).toList();
 

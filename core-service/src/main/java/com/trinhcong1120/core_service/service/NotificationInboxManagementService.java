@@ -60,7 +60,7 @@ public class NotificationInboxManagementService {
         StringBuilder where = new StringBuilder(" WHERE 1=1");
         List<Object> args = new ArrayList<>();
         if (channel != null && !channel.isBlank()) {
-            if (!List.of("EMAIL", "TELEGRAM").contains(channel)) throw new BadRequestException("Kênh không hợp lệ");
+            if (!List.of("EMAIL", "TELEGRAM", "ZALO").contains(channel)) throw new BadRequestException("Kênh không hợp lệ");
             where.append(" AND channel = ?"); args.add(channel);
         }
         if (status != null && !status.isBlank()) {

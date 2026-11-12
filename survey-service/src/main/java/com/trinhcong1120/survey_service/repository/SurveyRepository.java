@@ -27,23 +27,14 @@ public interface SurveyRepository extends JpaRepository<Survey, UUID> {
   Optional<Survey> findForWrite(@Param("id") UUID id);
 
   List<Survey> findAllByOrderByCreatedAtDesc();
+  List<Survey> findByIdInOrderByCreatedAtDesc(List<UUID> ids);
+  Page<Survey> findByIdIn(List<UUID> ids, Pageable pageable);
+  Page<Survey> findByIdInAndGroupId(List<UUID> ids, UUID groupId, Pageable pageable);
+  Page<Survey> findByGroupId(UUID groupId, Pageable pageable);
   List<Survey> findByPublishedAtIsNotNull();
 
   Optional<Survey> findByShareCode(String shareCode);
 
   boolean existsByShareCode(String shareCode);
-
-  @Query("""
-      select s from Survey s where s.creatorUserId = :userId
-      or exists (select 1 from SurveyAccess a where a.survey = s and a.userId = :userId and a.canView = true)
-      order by s.createdAt desc
-      """)
-  List<Survey> findVisibleTo(@Param("userId") UUID userId);
-
-  @Query("""
-      select s from Survey s where s.creatorUserId = :userId
-      or exists (select 1 from SurveyAccess a where a.survey = s and a.userId = :userId and a.canView = true)
-      """)
-  Page<Survey> findVisibleTo(@Param("userId") UUID userId, Pageable pageable);
 
 }

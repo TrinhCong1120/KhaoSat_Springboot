@@ -24,6 +24,12 @@ public class CreateUserRequest {
 
     private Long telegramChatId;
 
+    private String zaloChatId;
+
+    private String fullName;
+
+    private String phoneNumber;
+
     public CreateUserRequest() {
     }
 
@@ -65,5 +71,29 @@ public class CreateUserRequest {
 
     public void setTelegramChatId(Long telegramChatId) {
         this.telegramChatId = telegramChatId;
+    }
+
+    public String getZaloChatId() {
+        return zaloChatId;
+    }
+
+    public void setZaloChatId(String zaloChatId) {
+        this.zaloChatId = zaloChatId;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
 }

@@ -23,12 +23,13 @@ public class NotificationDeliveryWorker {
     private final TransactionTemplate transactions;
     private final EmailService email;
     private final TelegramService telegram;
+    private final ZaloService zalo;
     private final int maxAttempts;
     private final Duration delay1;
     private final Duration delay2;
 
     public NotificationDeliveryWorker(JdbcTemplate jdbc, TransactionTemplate transactions,
-            EmailService email, TelegramService telegram,
+            EmailService email, TelegramService telegram, ZaloService zalo,
             @Value("${notification.retry.max-attempts:3}") int maxAttempts,
             @Value("${notification.retry.delay-1:PT1M}") Duration delay1,
             @Value("${notification.retry.delay-2:PT5M}") Duration delay2) {
@@ -36,6 +37,7 @@ public class NotificationDeliveryWorker {
         this.transactions = transactions;
         this.email = email;
         this.telegram = telegram;
+        this.zalo = zalo;
         this.maxAttempts = Math.max(1, maxAttempts);
         this.delay1 = delay1;
         this.delay2 = delay2;
@@ -51,6 +53,8 @@ public class NotificationDeliveryWorker {
                 String providerMessageId;
                 if (job.channel().equals("EMAIL")) {
                     providerMessageId = email.sendEmail(job.id(), job.destination(), job.subject(), job.content(), job.replyToProviderId());
+                } else if (job.channel().equals("ZALO")) {
+                    providerMessageId = zalo.sendNotification(job.destination(), job.subject(), job.content(), job.replyToProviderId());
                 } else {
                     providerMessageId = telegram.sendNotification(Long.parseLong(job.destination()), job.subject(), job.content(), job.replyToProviderId());
                 }

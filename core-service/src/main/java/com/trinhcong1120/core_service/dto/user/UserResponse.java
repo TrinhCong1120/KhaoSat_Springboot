@@ -1,7 +1,6 @@
 package com.trinhcong1120.core_service.dto.user;
 
 import java.util.UUID;
-
 import java.util.List;
 
 public class UserResponse {
@@ -12,6 +11,11 @@ public class UserResponse {
     private Boolean isActive;
     private List<String> roles;
     private Long telegramChatId;
+    private String zaloChatId;
+    private String fullName;
+    private String phoneNumber;
+    private String avatarUrl;
+    private Boolean botNotificationEnabled;
 
     public UserResponse() {
     }
@@ -22,7 +26,23 @@ public class UserResponse {
             String email,
             Boolean isActive,
             List<String> roles,
-            Long telegramChatId) {
+            Long telegramChatId,
+            String zaloChatId) {
+        this(id, username, email, isActive, roles, telegramChatId, zaloChatId, null, null, null, true);
+    }
+
+    public UserResponse(
+            UUID id,
+            String username,
+            String email,
+            Boolean isActive,
+            List<String> roles,
+            Long telegramChatId,
+            String zaloChatId,
+            String fullName,
+            String phoneNumber,
+            String avatarUrl,
+            Boolean botNotificationEnabled) {
 
         this.id = id;
         this.username = username;
@@ -30,6 +50,11 @@ public class UserResponse {
         this.isActive = isActive;
         this.roles = roles;
         this.telegramChatId = telegramChatId;
+        this.zaloChatId = zaloChatId;
+        this.fullName = fullName;
+        this.phoneNumber = phoneNumber;
+        this.avatarUrl = avatarUrl;
+        this.botNotificationEnabled = botNotificationEnabled != null ? botNotificationEnabled : true;
     }
 
     public UUID getId() {
@@ -54,5 +79,25 @@ public class UserResponse {
 
     public Long getTelegramChatId() {
         return telegramChatId;
+    }
+
+    public String getZaloChatId() {
+        return zaloChatId;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public Boolean getBotNotificationEnabled() {
+        return botNotificationEnabled;
     }
 }

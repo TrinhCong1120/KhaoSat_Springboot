@@ -52,6 +52,9 @@ public class Answer {
   @Column(name = "address_detail", columnDefinition = "TEXT")
   private String addressDetail;
 
+  @Column(name = "matrix_data", columnDefinition = "TEXT")
+  private String matrixData;
+
   @JsonIgnore
   @OneToMany(
           mappedBy = "answer",
@@ -99,4 +102,7 @@ public class Answer {
   public void setAnswerOptions(List<AnswerOption> answerOptions) {
     this.answerOptions = answerOptions;
   }
+
+  public String getMatrixData() { return matrixData; }
+  public void setMatrixData(String matrixData) { this.matrixData = matrixData; }
 }

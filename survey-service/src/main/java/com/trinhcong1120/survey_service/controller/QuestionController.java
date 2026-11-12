@@ -29,7 +29,7 @@ public class QuestionController {
   }
 
   @GetMapping("/types")
-  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
+
   public ResponseEntity<List<QuestionTypeResponse>> getTypes() {
     return ResponseEntity.ok(questionTypeRepository.findAll().stream()
             .map(type -> new QuestionTypeResponse(type.getId(), type.getCode(), type.getName()))
@@ -37,7 +37,7 @@ public class QuestionController {
   }
 
   @GetMapping("/page/{pageId}")
-  @PreAuthorize("hasAnyAuthority('survey_view', 'survey_view_all')")
+
   public ResponseEntity<List<QuestionResponse>> getByPage(
           @PathVariable UUID pageId
   ) {
@@ -47,7 +47,7 @@ public class QuestionController {
   }
 
   @PostMapping
-  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
+
   public ResponseEntity<QuestionResponse> create(
           @Valid @RequestBody CreateQuestionRequest request
   ) {
@@ -57,7 +57,7 @@ public class QuestionController {
   }
 
   @PutMapping("/{id}")
-  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
+
   public ResponseEntity<QuestionResponse> update(
           @PathVariable UUID id,
           @Valid @RequestBody UpdateQuestionRequest request
@@ -71,7 +71,7 @@ public class QuestionController {
   }
 
   @DeleteMapping("/{id}")
-  @PreAuthorize("hasAnyAuthority('survey_update', 'survey_update_all')")
+
   public ResponseEntity<Map<String, String>> delete(
           @PathVariable UUID id
   ) {

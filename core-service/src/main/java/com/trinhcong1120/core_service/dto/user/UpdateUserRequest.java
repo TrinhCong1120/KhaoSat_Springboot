@@ -20,6 +20,10 @@ public class UpdateUserRequest {
     private List<UUID> roleIds;
     private Long telegramChatId;
     private boolean telegramChatIdPresent;
+    private String zaloChatId;
+    private boolean zaloChatIdPresent;
+    private String fullName;
+    private String phoneNumber;
 
     public UpdateUserRequest() {
     }
@@ -68,5 +72,35 @@ public class UpdateUserRequest {
     @JsonIgnore
     public boolean isTelegramChatIdPresent() {
         return telegramChatIdPresent;
+    }
+
+    public String getZaloChatId() {
+        return zaloChatId;
+    }
+
+    public void setZaloChatId(String zaloChatId) {
+        this.zaloChatId = zaloChatId;
+        this.zaloChatIdPresent = true;
+    }
+
+    @JsonIgnore
+    public boolean isZaloChatIdPresent() {
+        return zaloChatIdPresent;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
 }

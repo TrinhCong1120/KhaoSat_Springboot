@@ -1,6 +1,7 @@
 package com.trinhcong1120.survey_service.service;
 
 import java.util.UUID;
+import java.util.Optional;
 
 import com.trinhcong1120.survey_service.dto.condition.ConditionResponse;
 import com.trinhcong1120.survey_service.dto.media.MediaUploadResponse;
@@ -14,6 +15,7 @@ import com.trinhcong1120.survey_service.entity.Option;
 import com.trinhcong1120.survey_service.entity.Page;
 import com.trinhcong1120.survey_service.entity.Question;
 import com.trinhcong1120.survey_service.entity.Survey;
+import com.trinhcong1120.survey_service.entity.SurveyIntegration;
 import com.trinhcong1120.survey_service.exception.NotFoundException;
 import com.trinhcong1120.survey_service.exception.BadRequestException;
 import com.trinhcong1120.survey_service.exception.SurveyApiException;
@@ -53,6 +55,9 @@ public class SurveyService {
   private final QuestionValidationRuleService questionValidationRuleService;
   private final SurveyScheduleService schedule;
   private final SurveyAlertService alerts;
+  private final SurveyGroupService groups;
+  private final com.trinhcong1120.survey_service.security.GroupPermissions groupPermissions;
+  private final SurveyIntegrationRepository integrationRepository;
 
   public SurveyService(
           SurveyRepository surveyRepository,
@@ -68,7 +73,10 @@ public class SurveyService {
           MediaFileRepository mediaFileRepository,
           QuestionValidationRuleService questionValidationRuleService,
           SurveyScheduleService schedule,
-          SurveyAlertService alerts
+          SurveyAlertService alerts,
+          SurveyGroupService groups,
+          com.trinhcong1120.survey_service.security.GroupPermissions groupPermissions,
+          SurveyIntegrationRepository integrationRepository
   ) {
     this.surveyRepository = surveyRepository;
     this.guard = guard;
@@ -84,6 +92,9 @@ public class SurveyService {
     this.questionValidationRuleService = questionValidationRuleService;
     this.schedule = schedule;
     this.alerts = alerts;
+    this.groups = groups;
+    this.groupPermissions = groupPermissions;
+    this.integrationRepository = integrationRepository;
   }
 
   @Transactional(readOnly = true)
@@ -95,12 +106,14 @@ public class SurveyService {
   }
 
   @Transactional(readOnly = true)
-  public PagedResponse<SurveyResponse> getPage(int page) {
+  public PagedResponse<SurveyResponse> getPage(int page, UUID groupId, boolean shared) {
     if (page < 1) throw new BadRequestException("page phai bat dau tu 1");
     var pageable = PageRequest.of(page - 1, PAGE_SIZE,
             Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")));
-    return PagedResponse.from(guard.visibleSurveys(pageable).map(this::toResponse));
+    return PagedResponse.from(guard.visibleSurveys(pageable, groupId, shared).map(this::toResponse));
   }
+
+  public PagedResponse<SurveyResponse> getPage(int page) { return getPage(page, null, false); }
 
   @Transactional(readOnly = true)
   public Survey getEntity(UUID id) {
@@ -121,10 +134,14 @@ public class SurveyService {
     response.setDescription(survey.getDescription());
     response.setCreatorUser(survey.getCreatorUser());
     response.setCreatorUserId(survey.getCreatorUserId());
+    response.setGroupId(survey.getGroupId());
     var actions = guard.actions(survey);
     response.setCanEdit(actions.canEdit());
     response.setCanDelete(actions.canDelete());
     response.setCanManageAccess(actions.canManageAccess());
+    response.setCanViewResponses(guard.can(survey, "VIEW_RESPONSES"));
+    response.setCanExportData(guard.can(survey, "EXPORT_DATA"));
+    response.setCanManagePublication(guard.can(survey, "MANAGE_PUBLICATION"));
     response.setCreatedAt(survey.getCreatedAt());
     response.setStatus(schedule.status(survey).name());
     response.setOpenAt(schedule.toLocal(survey.getOpenAt()));
@@ -151,6 +168,8 @@ public class SurveyService {
         .map(c -> new SurveyDetailResponse.ScheduleWarning(c.getId(), "Lich hai trang cua condition khong giao nhau"))
         .toList());
 
+    integrationRepository.findBySurveyId(id).ifPresent(integ -> response.setGoogleIntegration(toIntegrationDto(integ)));
+
     return response;
   }
 
@@ -158,7 +177,10 @@ public class SurveyService {
           CreateSurveyRequest request,
           String username
   ) {
+    if (request.getGroupId() == null) throw new BadRequestException("groupId khong duoc de trong");
+    groups.require(request.getGroupId(), "CREATE_SURVEY");
     Survey survey = new Survey();
+    survey.setGroupId(request.getGroupId());
 
     survey.setTitle(request.getTitle());
     survey.setShareCode(generateShareCode());
@@ -195,12 +217,18 @@ public class SurveyService {
 
     survey.setTitle(request.getTitle());
     survey.setDescription(request.getDescription());
-    if (request.isOpenAtPresent()) survey.setOpenAt(schedule.toInstant(request.getOpenAt()));
-    if (request.isCloseAtPresent()) survey.setCloseAt(schedule.toInstant(request.getCloseAt()));
-    schedule.validate(survey.getOpenAt(), survey.getCloseAt());
-    for (Page page : pageRepository.findBySurvey_IdOrderByOrderIndexAsc(id))
-      schedule.validatePage(survey, page.getOpenAt(), page.getCloseAt());
-    if (request.isOpenAtPresent() || request.isCloseAtPresent()) survey.incrementValidationRevision();
+    boolean isGoogle = integrationRepository.findBySurveyId(id).isPresent();
+    if (isGoogle) {
+      survey.setOpenAt(null);
+      survey.setCloseAt(null);
+    } else {
+      if (request.isOpenAtPresent()) survey.setOpenAt(schedule.toInstant(request.getOpenAt()));
+      if (request.isCloseAtPresent()) survey.setCloseAt(schedule.toInstant(request.getCloseAt()));
+      schedule.validate(survey.getOpenAt(), survey.getCloseAt());
+      for (Page page : pageRepository.findBySurvey_IdOrderByOrderIndexAsc(id))
+        schedule.validatePage(survey, page.getOpenAt(), page.getCloseAt());
+      if (request.isOpenAtPresent() || request.isCloseAtPresent()) survey.incrementValidationRevision();
+    }
 
     return toResponse(surveyRepository.save(survey));
   }
@@ -209,7 +237,10 @@ public class SurveyService {
           UUID id,
           UpdateSurveyStatusRequest request
   ) {
-    guard.edit(id);
+    guard.publication(id);
+    if (integrationRepository.findBySurveyId(id).isPresent()) {
+      throw new BadRequestException("Khảo sát Google Form tự động đóng/mở theo Google Forms, không thể thiết lập trạng thái hoặc lên lịch thủ công.");
+    }
     Survey survey = surveyRepository.findForWrite(id).orElseThrow(() -> new NotFoundException("Survey khong ton tai"));
     Instant now = schedule.now();
     schedule.freezeIfExpired(survey, now);
@@ -261,6 +292,15 @@ public class SurveyService {
 
     surveyRepository.delete(survey);
     if (globalDelete) alerts.deletedByGlobalUser(survey, actorId);
+  }
+
+  public void move(UUID id, UUID targetGroupId) {
+    if (targetGroupId == null) throw new BadRequestException("groupId khong duoc de trong");
+    Survey survey = getEntity(id);
+    groups.require(survey.getGroupId(), "MANAGE_GROUP");
+    groups.require(targetGroupId, "MANAGE_GROUP");
+    survey.setGroupId(targetGroupId);
+    surveyRepository.save(survey);
   }
 
   private boolean hasPossibleQuestionPage(Survey survey, List<Page> pages, Instant at) {
@@ -334,6 +374,15 @@ public class SurveyService {
     );
     response.setMediaFiles(toMediaResponses("QUESTION", question.getId()));
 
+    response.setParentId(question.getParent() != null ? question.getParent().getId() : null);
+    response.setLevel(question.getLevel());
+    response.setPath(question.getPath());
+    response.setIsLeaf(question.getIsLeaf());
+    response.setAggregationType(question.getAggregationType());
+    response.setAggregationFormula(question.getAggregationFormula());
+    response.setWeight(question.getWeight());
+    response.setMatrixConfig(question.getMatrixConfig());
+
     return response;
   }
 
@@ -369,9 +418,11 @@ public class SurveyService {
   private ConditionResponse toConditionResponse(Condition condition) {
     return new ConditionResponse(
             condition.getId(),
-            condition.getSourceQuestion().getId(),
+            condition.getSourceQuestion() != null ? condition.getSourceQuestion().getId() : null,
             condition.getSourceValue(),
-            condition.getTargetQuestion().getId(),
+            condition.getTargetType(),
+            condition.getTargetQuestion() != null ? condition.getTargetQuestion().getId() : null,
+            condition.getTargetPage() != null ? condition.getTargetPage().getId() : null,
             condition.getAction()
     );
   }
@@ -392,10 +443,40 @@ public class SurveyService {
     response.setCanEdit(actions.canEdit());
     response.setCanDelete(actions.canDelete());
     response.setCanManageAccess(actions.canManageAccess());
+    response.setGroupId(survey.getGroupId());
+    response.setCanViewResponses(guard.can(survey, "VIEW_RESPONSES"));
+    response.setCanExportData(guard.can(survey, "EXPORT_DATA"));
+    Optional<SurveyIntegration> integOpt = integrationRepository.findBySurveyId(survey.getId());
+    boolean isGoogle = integOpt.isPresent();
+    response.setCanManagePublication(!isGoogle && guard.can(survey, "MANAGE_PUBLICATION"));
+    response.setSharedDirectly(!groupPermissions.direct(survey.getId(), guard.userId()).isEmpty()
+        && groupPermissions.group(survey.getGroupId(), guard.userId()).isEmpty());
     response.setShareCode(survey.getShareCode());
-    response.setOpenAt(schedule.toLocal(survey.getOpenAt()));
-    response.setCloseAt(schedule.toLocal(survey.getCloseAt()));
+    if (isGoogle) {
+      response.setOpenAt(null);
+      response.setCloseAt(null);
+      SurveyIntegration integ = integOpt.get();
+      GoogleIntegrationDto dto = toIntegrationDto(integ);
+      dto.setIsAcceptingResponses(!survey.isManuallyLocked());
+      response.setGoogleIntegration(dto);
+    } else {
+      response.setOpenAt(schedule.toLocal(survey.getOpenAt()));
+      response.setCloseAt(schedule.toLocal(survey.getCloseAt()));
+    }
     return response;
+  }
+
+  private GoogleIntegrationDto toIntegrationDto(SurveyIntegration integ) {
+    GoogleIntegrationDto dto = new GoogleIntegrationDto();
+    dto.setId(integ.getId());
+    dto.setProvider(integ.getProvider());
+    dto.setGoogleFormId(integ.getGoogleFormId());
+    dto.setEditUrl(integ.getEditUrl());
+    dto.setResponseUrl(integ.getResponseUrl());
+    dto.setSyncStatus(integ.getSyncStatus());
+    dto.setLastSyncedAt(integ.getLastSyncedAt());
+    dto.setLastSyncError(integ.getLastSyncError());
+    return dto;
   }
 
   private List<MediaUploadResponse> toMediaResponses(

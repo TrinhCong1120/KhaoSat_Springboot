@@ -33,6 +33,9 @@ public class Survey {
   @Column(name = "creator_user_id")
   private UUID creatorUserId;
 
+  @Column(name = "group_id", nullable = false)
+  private UUID groupId;
+
   @Column(name = "created_at")
   private LocalDateTime createdAt;
 
@@ -80,6 +83,8 @@ public class Survey {
   public void setCreatorUser(String creatorUser) { this.creatorUser = creatorUser; }
   public UUID getCreatorUserId() { return creatorUserId; }
   public void setCreatorUserId(UUID creatorUserId) { this.creatorUserId = creatorUserId; }
+  public UUID getGroupId() { return groupId; }
+  public void setGroupId(UUID groupId) { this.groupId = groupId; }
 
   public LocalDateTime getCreatedAt() { return createdAt; }
   public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

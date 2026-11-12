@@ -92,6 +92,12 @@ public class MenuService {
                         )
                         .collect(Collectors.toSet());
 
+        Set<String> permissionCodes = user.getRoles().stream()
+                .flatMap(role -> role.getPermissions().stream())
+                .filter(permission -> Boolean.TRUE.equals(permission.getIsActive()))
+                .map(Permission::getCode)
+                .collect(Collectors.toSet());
+
         List<Menu> allowedMenus =
                 menuRepository
                         .findAllByOrderByOrderIndexAsc()
@@ -104,6 +110,8 @@ public class MenuService {
                                                         .getId()
                                         )
                         )
+                        .filter(menu -> !"/survey/failsubmit".equals(menu.getPath())
+                                || permissionCodes.contains("survey_failed_manage"))
                         .toList();
 
         return buildTree(allowedMenus);

@@ -20,6 +20,10 @@ public class SurveyDetailResponse {
     private String description;
     private String creatorUser;
     private UUID creatorUserId;
+    private UUID groupId;
+    private boolean canViewResponses;
+    private boolean canExportData;
+    private boolean canManagePublication;
     private boolean canEdit;
     private boolean canDelete;
     private boolean canManageAccess;
@@ -36,6 +40,10 @@ public class SurveyDetailResponse {
     private List<ConditionResponse> conditions = new ArrayList<>();
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private ValidationRuleCatalogResponse validationRuleCatalog;
+    private GoogleIntegrationDto googleIntegration;
+
+    public GoogleIntegrationDto getGoogleIntegration() { return googleIntegration; }
+    public void setGoogleIntegration(GoogleIntegrationDto googleIntegration) { this.googleIntegration = googleIntegration; }
 
     public SurveyDetailResponse() {
     }
@@ -73,6 +81,14 @@ public class SurveyDetailResponse {
 
     public UUID getCreatorUserId() { return creatorUserId; }
     public void setCreatorUserId(UUID creatorUserId) { this.creatorUserId = creatorUserId; }
+    public UUID getGroupId() { return groupId; }
+    public void setGroupId(UUID groupId) { this.groupId = groupId; }
+    public boolean isCanViewResponses() { return canViewResponses; }
+    public void setCanViewResponses(boolean value) { canViewResponses = value; }
+    public boolean isCanExportData() { return canExportData; }
+    public void setCanExportData(boolean value) { canExportData = value; }
+    public boolean isCanManagePublication() { return canManagePublication; }
+    public void setCanManagePublication(boolean value) { canManagePublication = value; }
     public boolean isCanEdit() { return canEdit; }
     public void setCanEdit(boolean canEdit) { this.canEdit = canEdit; }
     public boolean isCanDelete() { return canDelete; }

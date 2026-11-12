@@ -30,7 +30,7 @@ public class NotificationManagementService {
                            String errorNote, String providerMessageId, UUID inReplyToInboundId) {}
     public record Attempt(int attemptNo, Instant startedAt, Instant finishedAt,
                           String status, String errorNote) {}
-    public record Recipient(UUID id, String username, String email, Long telegramChatId) {}
+    public record Recipient(UUID id, String username, String email, Long telegramChatId, String zaloChatId) {}
     public record Detail(Delivery delivery, List<Attempt> attempts) {}
     public record Page(List<Delivery> content, int page, int size, long totalElements,
                        int totalPages) {}
@@ -95,7 +95,7 @@ public class NotificationManagementService {
         }
         if (channel != null && !channel.isBlank()) {
             String value = channel.trim().toUpperCase();
-            if (!Set.of("EMAIL", "TELEGRAM").contains(value))
+            if (!Set.of("EMAIL", "TELEGRAM", "ZALO").contains(value))
                 throw new BadRequestException("Kênh không hợp lệ");
             where.append(" AND channel = ?"); args.add(value);
         }
@@ -135,13 +135,14 @@ public class NotificationManagementService {
         String search = q == null ? "" : q.trim();
         if (search.length() > 100) throw new BadRequestException("Từ khóa quá dài");
         return jdbc.query("""
-            SELECT id, username, email, telegram_chat_id FROM users
+            SELECT id, username, email, telegram_chat_id, zalo_chat_id FROM users
             WHERE is_active IS TRUE
               AND (username ILIKE ? OR email ILIKE ?)
             ORDER BY lower(username), id LIMIT 30
             """, (rs, n) -> new Recipient(rs.getObject("id", UUID.class),
                 rs.getString("username"), rs.getString("email"),
-                rs.getObject("telegram_chat_id", Long.class)), "%" + search + "%", "%" + search + "%");
+                rs.getObject("telegram_chat_id", Long.class), rs.getString("zalo_chat_id")),
+                "%" + search + "%", "%" + search + "%");
     }
 
     @Transactional
@@ -154,7 +155,7 @@ public class NotificationManagementService {
         if (recipientIds.isEmpty() || recipientIds.size() > 100 || recipientIds.contains(null))
             throw new BadRequestException("Chọn từ 1 đến 100 người nhận");
         if (channels.isEmpty() || channels.stream().anyMatch(c -> c == null
-                || !Set.of("EMAIL", "TELEGRAM").contains(c)))
+                || !Set.of("EMAIL", "TELEGRAM", "ZALO").contains(c)))
             throw new BadRequestException("Kênh gửi không hợp lệ");
         String subject = request.subject().trim();
         String content = request.content().trim();
@@ -168,8 +169,13 @@ public class NotificationManagementService {
             if (!Boolean.TRUE.equals(recipient.getIsActive()))
                 throw new BadRequestException("Người nhận không hoạt động: " + recipient.getUsername());
             for (String channel : channels) {
-                String destination = channel.equals("EMAIL") ? recipient.getEmail()
-                        : recipient.getTelegramChatId() == null ? null : recipient.getTelegramChatId().toString();
+                String destination = switch (channel) {
+                    case "EMAIL" -> recipient.getEmail();
+                    case "TELEGRAM" -> recipient.getTelegramChatId() == null
+                            ? null : recipient.getTelegramChatId().toString();
+                    case "ZALO" -> recipient.getZaloChatId();
+                    default -> null;
+                };
                 if (destination == null || destination.isBlank())
                     throw new BadRequestException(recipient.getUsername() + " chưa liên kết " + channel);
                 UUID id = UUID.randomUUID();

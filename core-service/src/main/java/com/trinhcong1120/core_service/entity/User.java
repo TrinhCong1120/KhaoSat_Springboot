@@ -30,6 +30,21 @@ public class User {
     @Column(name = "telegram_chat_id", unique = true)
     private Long telegramChatId;
 
+    @Column(name = "zalo_chat_id", unique = true, length = 100)
+    private String zaloChatId;
+
+    @Column(name = "full_name")
+    private String fullName;
+
+    @Column(name = "phone_number", length = 50)
+    private String phoneNumber;
+
+    @Column(name = "avatar_url", columnDefinition = "TEXT")
+    private String avatarUrl;
+
+    @Column(name = "bot_notification_enabled")
+    private Boolean botNotificationEnabled = true;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "user_roles",
@@ -89,11 +104,51 @@ public class User {
         this.telegramChatId = telegramChatId;
     }
 
+    public String getZaloChatId() {
+        return zaloChatId;
+    }
+
+    public void setZaloChatId(String zaloChatId) {
+        this.zaloChatId = zaloChatId;
+    }
+
     public Set<Role> getRoles() {
         return roles;
     }
 
     public void setRoles(Set<Role> roles) {
         this.roles = roles;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+    }
+
+    public Boolean getBotNotificationEnabled() {
+        return botNotificationEnabled;
+    }
+
+    public void setBotNotificationEnabled(Boolean botNotificationEnabled) {
+        this.botNotificationEnabled = botNotificationEnabled;
     }
 }

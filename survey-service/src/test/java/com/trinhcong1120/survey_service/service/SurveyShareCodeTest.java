@@ -17,6 +17,7 @@ import com.trinhcong1120.survey_service.exception.NotFoundException;
 import com.trinhcong1120.survey_service.exception.SurveyApiException;
 import com.trinhcong1120.survey_service.repository.*;
 import com.trinhcong1120.survey_service.security.SurveyAccessGuard;
+import com.trinhcong1120.survey_service.security.GroupPermissions;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.List;
@@ -35,12 +36,14 @@ class SurveyShareCodeTest {
   private final ConditionRepository conditions = mock(ConditionRepository.class);
   private final QuestionValidationRuleService rules = mock(QuestionValidationRuleService.class);
   private final SurveyAlertService alerts = mock(SurveyAlertService.class);
+  private final SurveyGroupService groups = mock(SurveyGroupService.class);
+  private final GroupPermissions permissions = mock(GroupPermissions.class);
   private final SurveyService service = new SurveyService(
       surveys, guard, mock(SurveyAccessRepository.class), pages,
       questions, options,
       conditions, mock(ResponseRepository.class),
       mock(AnswerRepository.class), mock(AnswerOptionRepository.class),
-      media, rules, schedule, alerts);
+      media, rules, schedule, alerts, groups, permissions, mock(SurveyIntegrationRepository.class));
 
   @BeforeEach
   void stubActions() {
@@ -114,7 +117,9 @@ class SurveyShareCodeTest {
       survey.setId(UUID.randomUUID());
       return survey;
     });
-    var response = service.create(new CreateSurveyRequest("Survey", null), "editor");
+    CreateSurveyRequest request = new CreateSurveyRequest("Survey", null);
+    request.setGroupId(UUID.randomUUID());
+    var response = service.create(request, "editor");
     assertTrue(response.getShareCode().matches("[a-z0-9]{8}"));
   }
 

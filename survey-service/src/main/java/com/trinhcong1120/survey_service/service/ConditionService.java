@@ -5,6 +5,7 @@ import java.util.UUID;
 import com.trinhcong1120.survey_service.dto.condition.*;
 import com.trinhcong1120.survey_service.entity.Condition;
 import com.trinhcong1120.survey_service.entity.Option;
+import com.trinhcong1120.survey_service.entity.Page;
 import com.trinhcong1120.survey_service.entity.Question;
 import com.trinhcong1120.survey_service.entity.Survey;
 import com.trinhcong1120.survey_service.exception.BadRequestException;
@@ -23,6 +24,7 @@ public class ConditionService {
   private final com.trinhcong1120.survey_service.security.SurveyAccessGuard guard;
   private final QuestionRepository questionRepository;
   private final OptionRepository optionRepository;
+  private final PageRepository pageRepository;
   private final SurveyRepository surveyRepository;
 
   public ConditionService(
@@ -30,12 +32,14 @@ public class ConditionService {
           com.trinhcong1120.survey_service.security.SurveyAccessGuard guard,
           QuestionRepository questionRepository,
           OptionRepository optionRepository,
+          PageRepository pageRepository,
           SurveyRepository surveyRepository
   ) {
     this.conditionRepository = conditionRepository;
     this.guard = guard;
     this.questionRepository = questionRepository;
     this.optionRepository = optionRepository;
+    this.pageRepository = pageRepository;
     this.surveyRepository = surveyRepository;
   }
 
@@ -64,30 +68,46 @@ public class ConditionService {
   public ConditionResponse create(
           CreateConditionRequest request
   ) {
-    guard.editConditionQuestions(request.getSourceQuestionId(), request.getTargetQuestionId());
-    Question source = getQuestion(
-            request.getSourceQuestionId());
+    String targetType = request.getTargetType() != null ? request.getTargetType().trim().toUpperCase() : "QUESTION";
+    if (!"QUESTION".equals(targetType) && !"PAGE".equals(targetType)) {
+      throw new BadRequestException("Target type phải là QUESTION hoặc PAGE");
+    }
+    guard.editConditionTargets(request.getSourceQuestionId(), targetType, request.getTargetQuestionId(), request.getTargetPageId());
 
-    Question target = getQuestion(
-            request.getTargetQuestionId());
+    Question source = getQuestion(request.getSourceQuestionId());
+    Question targetQuestion = null;
+    Page targetPage = null;
+
+    if ("PAGE".equals(targetType)) {
+      if (request.getTargetPageId() == null) {
+        throw new BadRequestException("Target page ID không được để trống khi targetType là PAGE");
+      }
+      targetPage = pageRepository.findById(request.getTargetPageId())
+              .orElseThrow(() -> new NotFoundException("Page không tồn tại"));
+      if (source.getPage() != null && source.getPage().getId().equals(targetPage.getId())) {
+        throw new BadRequestException("Source question không được nằm trong target page của condition");
+      }
+    } else {
+      if (request.getTargetQuestionId() == null) {
+        throw new BadRequestException("Target question ID không được để trống khi targetType là QUESTION");
+      }
+      targetQuestion = getQuestion(request.getTargetQuestionId());
+    }
 
     String action = validateAction(request.getAction());
 
-    String value =
-            normalizeSourceValue(
-                    source,
-                    request.getSourceValue()
-            );
+    String value = normalizeSourceValue(source, request.getSourceValue());
 
     Condition condition = new Condition();
-
     condition.setSourceQuestion(source);
     condition.setSourceValue(value);
-    condition.setTargetQuestion(target);
+    condition.setTargetType(targetType);
+    condition.setTargetQuestion(targetQuestion);
+    condition.setTargetPage(targetPage);
     condition.setAction(action);
 
     Condition saved = conditionRepository.save(condition);
-    bumpRevision(target);
+    bumpRevision(saved);
 
     return toResponse(saved);
   }
@@ -97,7 +117,12 @@ public class ConditionService {
           UpdateConditionRequest request
   ) {
     guard.editCondition(id);
-    guard.editConditionQuestions(request.getSourceQuestionId(), request.getTargetQuestionId());
+    String targetType = request.getTargetType() != null ? request.getTargetType().trim().toUpperCase() : "QUESTION";
+    if (!"QUESTION".equals(targetType) && !"PAGE".equals(targetType)) {
+      throw new BadRequestException("Target type phải là QUESTION hoặc PAGE");
+    }
+    guard.editConditionTargets(request.getSourceQuestionId(), targetType, request.getTargetQuestionId(), request.getTargetPageId());
+
     Condition condition =
             conditionRepository.findById(id)
                     .orElseThrow(() ->
@@ -109,17 +134,31 @@ public class ConditionService {
       throw new BadRequestException("Khong duoc chuyen condition sang survey khac");
     }
 
-    Question source =
-            getQuestion(request.getSourceQuestionId());
+    Question source = getQuestion(request.getSourceQuestionId());
+    Question targetQuestion = null;
+    Page targetPage = null;
 
-    Question target =
-            getQuestion(request.getTargetQuestionId());
+    if ("PAGE".equals(targetType)) {
+      if (request.getTargetPageId() == null) {
+        throw new BadRequestException("Target page ID không được để trống khi targetType là PAGE");
+      }
+      targetPage = pageRepository.findById(request.getTargetPageId())
+              .orElseThrow(() -> new NotFoundException("Page không tồn tại"));
+      if (source.getPage() != null && source.getPage().getId().equals(targetPage.getId())) {
+        throw new BadRequestException("Source question không được nằm trong target page của condition");
+      }
+    } else {
+      if (request.getTargetQuestionId() == null) {
+        throw new BadRequestException("Target question ID không được để trống khi targetType là QUESTION");
+      }
+      targetQuestion = getQuestion(request.getTargetQuestionId());
+    }
 
     condition.setSourceQuestion(source);
-    condition.setTargetQuestion(target);
-    condition.setAction(
-            validateAction(request.getAction())
-    );
+    condition.setTargetType(targetType);
+    condition.setTargetQuestion(targetQuestion);
+    condition.setTargetPage(targetPage);
+    condition.setAction(validateAction(request.getAction()));
 
     condition.setSourceValue(
             normalizeSourceValue(
@@ -129,7 +168,7 @@ public class ConditionService {
     );
 
     Condition saved = conditionRepository.save(condition);
-    bumpRevision(target);
+    bumpRevision(saved);
 
     return toResponse(saved);
   }
@@ -144,19 +183,23 @@ public class ConditionService {
                                     "Condition không tồn tại"));
 
     conditionRepository.delete(condition);
-    bumpRevision(condition.getTargetQuestion());
+    bumpRevision(condition);
   }
 
-  private void bumpRevision(Question question) {
-    if (question == null
-            || question.getPage() == null
-            || question.getPage().getSurvey() == null) {
-      return;
+  private void bumpRevision(Condition condition) {
+    if (condition == null) return;
+    Survey survey = null;
+    if (condition.getTargetQuestion() != null && condition.getTargetQuestion().getPage() != null) {
+      survey = condition.getTargetQuestion().getPage().getSurvey();
+    } else if (condition.getTargetPage() != null) {
+      survey = condition.getTargetPage().getSurvey();
+    } else if (condition.getSourceQuestion() != null && condition.getSourceQuestion().getPage() != null) {
+      survey = condition.getSourceQuestion().getPage().getSurvey();
     }
-
-    Survey survey = question.getPage().getSurvey();
-    survey.incrementValidationRevision();
-    surveyRepository.save(survey);
+    if (survey != null) {
+      survey.incrementValidationRevision();
+      surveyRepository.save(survey);
+    }
   }
 
   private Question getQuestion(UUID id) {
@@ -252,8 +295,20 @@ public class ConditionService {
 
         } catch (IllegalArgumentException e) {
 
-          throw new BadRequestException(
-                  "Source value phải chứa option ID hợp lệ");
+          // Fallback: Nếu client gửi optionText thay vì UUID, tìm option theo text của source question
+          List<Option> matching = optionRepository
+                  .findByQuestion_IdOrderByOrderIndexAsc(source.getId())
+                  .stream()
+                  .filter(o -> o.getOptionText() != null
+                          && o.getOptionText().trim().equalsIgnoreCase(item.trim()))
+                  .toList();
+
+          if (!matching.isEmpty()) {
+            ids.add(matching.get(0).getId());
+          } else {
+            throw new BadRequestException(
+                    "Source value phải chứa option ID hợp lệ");
+          }
         }
       }
 
@@ -273,9 +328,11 @@ public class ConditionService {
   ) {
     return new ConditionResponse(
             condition.getId(),
-            condition.getSourceQuestion().getId(),
+            condition.getSourceQuestion() != null ? condition.getSourceQuestion().getId() : null,
             condition.getSourceValue(),
-            condition.getTargetQuestion().getId(),
+            condition.getTargetType(),
+            condition.getTargetQuestion() != null ? condition.getTargetQuestion().getId() : null,
+            condition.getTargetPage() != null ? condition.getTargetPage().getId() : null,
             condition.getAction()
     );
   }

@@ -24,20 +24,40 @@ public class NotificationConsumer {
         NotificationEvent event = record.value();
         if (event == null) return;
         boolean email = event.getEmail() != null && !event.getEmail().isBlank();
-        if (!email && event.getTelegramChatId() == null) {
+        boolean telegram = event.getTelegramChatId() != null;
+        boolean zalo = event.getZaloChatId() != null && !event.getZaloChatId().isBlank();
+        if (!email && !telegram && !zalo) {
             log.warn("Ignoring notification event {} without a destination", event.getEventType());
             return;
         }
-        String channel = email ? "EMAIL" : "TELEGRAM";
-        String destination = email ? event.getEmail().trim() : event.getTelegramChatId().toString();
+        String channel;
+        String destination;
+        if (email) {
+            channel = "EMAIL";
+            destination = event.getEmail().trim();
+        } else if (telegram) {
+            channel = "TELEGRAM";
+            destination = event.getTelegramChatId().toString();
+        } else {
+            channel = "ZALO";
+            destination = event.getZaloChatId().trim();
+        }
         UUID recipientId = event.getRecipientId();
         String recipientName = event.getUsername();
         if (recipientId == null) {
-            String lookup = email ? "SELECT id, username FROM users WHERE lower(email) = lower(?)"
-                    : "SELECT id, username FROM users WHERE telegram_chat_id = ?";
+            String lookup = switch (channel) {
+                case "EMAIL" -> "SELECT id, username FROM users WHERE lower(email) = lower(?)";
+                case "TELEGRAM" -> "SELECT id, username FROM users WHERE telegram_chat_id = ?";
+                default -> "SELECT id, username FROM users WHERE zalo_chat_id = ?";
+            };
+            Object key = switch (channel) {
+                case "EMAIL" -> destination;
+                case "TELEGRAM" -> event.getTelegramChatId();
+                default -> destination;
+            };
             List<UserInfo> found = jdbc.query(lookup,
                     (rs, n) -> new UserInfo(rs.getObject("id", UUID.class), rs.getString("username")),
-                    email ? destination : event.getTelegramChatId());
+                    key);
             if (found.size() == 1) {
                 recipientId = found.get(0).id();
                 recipientName = found.get(0).username();

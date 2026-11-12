@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS notification_deliveries (
     recipient_user_id uuid,
     recipient_name varchar(255),
     destination varchar(320) NOT NULL,
-    channel varchar(16) NOT NULL CHECK (channel IN ('EMAIL', 'TELEGRAM')),
+    channel varchar(16) NOT NULL CHECK (channel IN ('EMAIL', 'TELEGRAM', 'ZALO')),
     subject varchar(500) NOT NULL,
     content text NOT NULL,
     event_type varchar(100),

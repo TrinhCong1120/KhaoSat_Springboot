@@ -2,7 +2,7 @@
 BEGIN;
 CREATE TABLE IF NOT EXISTS notification_inbox_messages (
     id uuid PRIMARY KEY,
-    channel varchar(16) NOT NULL CHECK (channel IN ('EMAIL', 'TELEGRAM')),
+    channel varchar(16) NOT NULL CHECK (channel IN ('EMAIL', 'TELEGRAM', 'ZALO')),
     provider_key varchar(400) NOT NULL UNIQUE,
     provider_message_id varchar(500),
     sender_address varchar(500) NOT NULL,

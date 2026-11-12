@@ -2,6 +2,7 @@ package com.trinhcong1120.survey_service.dto.survey;
 
 import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 public class CreateSurveyRequest {
 
@@ -9,6 +10,7 @@ public class CreateSurveyRequest {
     private String title;
 
     private String description;
+    private UUID groupId;
     private LocalDateTime openAt;
     private LocalDateTime closeAt;
 
@@ -35,6 +37,8 @@ public class CreateSurveyRequest {
     public void setDescription(String description) {
         this.description = description;
     }
+    public UUID getGroupId() { return groupId; }
+    public void setGroupId(UUID groupId) { this.groupId = groupId; }
 
     public LocalDateTime getOpenAt() { return openAt; }
     public void setOpenAt(LocalDateTime openAt) { this.openAt = openAt; }

@@ -69,7 +69,7 @@ class SurveyTrafficStatisticsTest {
 
   @Test
   void accessIsCheckedBeforeReadingTracking() {
-    doThrow(new AccessDeniedException("denied")).when(guard).view(surveyId);
+    doThrow(new AccessDeniedException("denied")).when(guard).viewResponses(surveyId);
     assertThrows(AccessDeniedException.class,
         () -> statistics.getTraffic(surveyId, from, to, "UTC", "HOUR"));
     verifyNoInteractions(jdbc);

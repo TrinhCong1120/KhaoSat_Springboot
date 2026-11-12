@@ -40,10 +40,11 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
 
                     /*
-                     * Public Survey
+                     * Public Survey & Integrations Callback
                      */
                     .requestMatchers(
-                            "/api/public/**"
+                            "/api/public/**",
+                            "/api/integrations/google/callback"
                     ).permitAll()
 
                     /*

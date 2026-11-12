@@ -30,6 +30,13 @@ spring:
       max-request-size: ${MAX_REQUEST_SIZE:50MB}
 
 app:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
+    redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost/api/integrations/google/callback}
+    encryption-secret: ${GOOGLE_ENCRYPTION_SECRET:Default32ByteSecretKeyForAesGcm1234}
+    frontend-success-url: ${GOOGLE_FRONTEND_SUCCESS_URL:http://localhost:3000/admin/survey?google_connected=true}
+    frontend-failure-url: ${GOOGLE_FRONTEND_FAILURE_URL:http://localhost:3000/admin/survey?google_error=true}
   minio:
     endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
     access-key: ${MINIO_ACCESS_KEY}

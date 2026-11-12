@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -82,38 +83,101 @@ public class DashboardReportingService {
   }
 
   public Map<String, Object> report(Period p) {
+    return report(p, null, null);
+  }
+
+  public Map<String, Object> report(Period p, List<UUID> scopedSurveyIds, List<Survey> scopedSurveys) {
+    if (scopedSurveyIds != null && scopedSurveyIds.isEmpty()) {
+      return emptyReport(p);
+    }
     Timestamp from = ts(p.from()), to = ts(p.to());
-    List<Survey> all = surveys.findAllByOrderByCreatedAtDesc();
-    Map<String, Object> portfolio = portfolio(p, all);
+    List<Survey> all = scopedSurveyIds == null ? surveys.findAllByOrderByCreatedAtDesc()
+        : (scopedSurveys != null ? scopedSurveys : surveys.findByIdInOrderByCreatedAtDesc(scopedSurveyIds));
+    Map<String, Object> portfolio = portfolio(p, all, scopedSurveyIds);
     Timestamp firstTracking = jdbc.queryForObject("select min(received_at) from survey_events "
-        + "where event_type='SURVEY_VIEWED' and event_source='CLIENT'", Timestamp.class);
+        + "where event_type='SURVEY_VIEWED' and event_source='CLIENT'"
+        + (scopedSurveyIds == null ? "" : " and survey_id in (" + inSql(scopedSurveyIds.size()) + ")"),
+        Timestamp.class, scopedSurveyIds == null ? new Object[0] : scopedSurveyIds.toArray());
     Map<String, Object> result = map(
         "period", map("from", p.from(), "to", p.to(), "bucket", p.bucket(),
             "timezone", ZONE.getId(), "filterMode", p.filterMode(),
             "trendMode", p.filterMode().equals("BETWEEN") ? "PREVIOUS_EQUAL_PERIOD" : "RECENT_30_DAYS",
             "trendFrom", p.trendFrom(), "trendTo", p.trendTo(),
             "previousFrom", p.previousFrom(), "previousTo", p.previousTo()),
-        "generatedAt", Instant.now(), "system", system(), "website", website(p),
-        "portfolio", portfolio, "activity", activity(p, firstTracking),
-        "funnel", funnel(p), "acquisition", acquisition(p), "engagement", engagement(p),
-        "quality", quality(p, firstTracking), "completeness", completeness(p));
-    long submissions = count("select count(*) from responses where submitted_at>=? and submitted_at<?", from, to);
-    long trendSubmissions = count("select count(*) from responses where submitted_at>=? and submitted_at<?",
+        "generatedAt", Instant.now(),
+        "system", scopedSurveyIds == null ? system() : null,
+        "website", scopedSurveyIds == null ? website(p) : null,
+        "portfolio", portfolio, "activity", activity(p, firstTracking, scopedSurveyIds),
+        "funnel", funnel(p, scopedSurveyIds), "acquisition", acquisition(p, scopedSurveyIds),
+        "engagement", engagement(p, scopedSurveyIds),
+        "quality", quality(p, firstTracking, scopedSurveyIds),
+        "completeness", completeness(p, scopedSurveyIds));
+
+    long submissions = countScoped("select count(*) from responses where submitted_at>=? and submitted_at<?", scopedSurveyIds, from, to);
+    long trendSubmissions = countScoped("select count(*) from responses where submitted_at>=? and submitted_at<?", scopedSurveyIds,
         ts(p.trendFrom()), ts(p.trendTo()));
-    long previousSubmissions = count("select count(*) from responses where submitted_at>=? and submitted_at<?",
+    long previousSubmissions = countScoped("select count(*) from responses where submitted_at>=? and submitted_at<?", scopedSurveyIds,
         ts(p.previousFrom()), ts(p.previousTo()));
     Timestamp firstView = firstTracking;
     result.put("submissionsTrend", trend(trendSubmissions, previousSubmissions));
     result.put("viewsTrend", firstView == null || !firstView.toInstant().isBefore(p.previousTo()) ? null
-        : trend(count("select count(*) from survey_events where event_type='SURVEY_VIEWED' "
-              + "and event_source='CLIENT' and received_at>=? and received_at<?",
+        : trend(countScoped("select count(*) from survey_events where event_type='SURVEY_VIEWED' "
+              + "and event_source='CLIENT' and received_at>=? and received_at<?", scopedSurveyIds,
               ts(p.trendFrom()), ts(p.trendTo())),
-            count("select count(*) from survey_events where event_type='SURVEY_VIEWED' "
-              + "and event_source='CLIENT' and received_at>=? and received_at<?",
+            countScoped("select count(*) from survey_events where event_type='SURVEY_VIEWED' "
+              + "and event_source='CLIENT' and received_at>=? and received_at<?", scopedSurveyIds,
               ts(p.previousFrom()), ts(p.previousTo()))));
     result.put("averageSubmissionsPerSurvey", all.isEmpty() ? null : round(submissions * 1.0 / all.size()));
     int buckets = ((List<?>) ((Map<?, ?>) result.get("activity")).get("timeline")).size();
     result.put("averageSubmissionsPerBucket", buckets == 0 ? null : round(submissions * 1.0 / buckets));
+    return result;
+  }
+
+  private Map<String, Object> emptyReport(Period p) {
+    Map<String, Long> statuses = new LinkedHashMap<>();
+    for (SurveyScheduleService.Status value : SurveyScheduleService.Status.values())
+      statuses.put(value.name(), 0L);
+    Map<String, Object> portfolio = map("totalSurveys", 0, "statuses", statuses,
+        "createdInPeriod", 0L, "publishedInPeriod", 0L, "withoutResponses", 0L);
+
+    int size = bucketSize(p);
+    List<Map<String, Object>> timeline = new ArrayList<>();
+    for (int i = 0; i < size; i++) {
+      Instant start = bucketStart(p, i);
+      String label = p.bucket().equals("HOUR") ? HOUR_LABEL.format(start.atZone(ZONE))
+          : p.bucket().equals("YEAR") ? String.valueOf(start.atZone(ZONE).getYear())
+          : p.bucket().equals("MONTH") ? start.atZone(ZONE).toLocalDate().toString().substring(0, 7)
+          : LocalDate.ofInstant(start, ZONE).toString();
+      timeline.add(map("label", label, "start", start, "views", 0L, "submissions", 0L));
+    }
+    Map<String, Object> activity = map("views", 0L, "submissions", 0L, "timeline", timeline,
+        "trackingStartedAt", null, "trackingStatus", "OBSERVED");
+    Map<String, Object> funnel = map("viewed", 0L, "started", 0L, "submitted", 0L,
+        "inProgress", 0L, "abandoned", 0L, "onlyViewed", 0L,
+        "viewToStartRate", null, "startToSubmitRate", null, "viewToSubmitRate", null, "provisional", false);
+    Map<String, Object> acquisition = map("devices", List.of(), "sources", List.of(), "mediums", List.of());
+    Map<String, Object> engagement = map("medianActiveDurationMs", null, "averagePagesViewed", null,
+        "byWeekday", List.of(), "byHour", List.of());
+    Map<String, Object> quality = map("responseSessionCoverage", null, "questionCountCoverage", null,
+        "deviceCoverage", null, "sourceCoverage", null, "durationCoverage", null, "trackingStartedAt", null);
+    Map<String, Object> completeness = map("responses", 0L, "exactResponses", 0L, "applicableQuestions", 0L,
+        "answeredQuestions", 0L, "skippedQuestions", 0L, "averageApplicable", null,
+        "averageAnswered", null, "averageSkipped", null, "completionRate", null, "estimatedLegacyResponses", 0L);
+
+    Map<String, Object> result = map(
+        "period", map("from", p.from(), "to", p.to(), "bucket", p.bucket(),
+            "timezone", ZONE.getId(), "filterMode", p.filterMode(),
+            "trendMode", p.filterMode().equals("BETWEEN") ? "PREVIOUS_EQUAL_PERIOD" : "RECENT_30_DAYS",
+            "trendFrom", p.trendFrom(), "trendTo", p.trendTo(),
+            "previousFrom", p.previousFrom(), "previousTo", p.previousTo()),
+        "generatedAt", Instant.now(), "system", null, "website", null,
+        "portfolio", portfolio, "activity", activity, "funnel", funnel,
+        "acquisition", acquisition, "engagement", engagement, "quality", quality,
+        "completeness", completeness);
+    result.put("submissionsTrend", trend(0, 0));
+    result.put("viewsTrend", null);
+    result.put("averageSubmissionsPerSurvey", null);
+    result.put("averageSubmissionsPerBucket", null);
     return result;
   }
 
@@ -174,7 +238,7 @@ public class DashboardReportingService {
     return value == null ? null : value.toInstant();
   }
 
-  private Map<String, Object> portfolio(Period p, List<Survey> all) {
+  private Map<String, Object> portfolio(Period p, List<Survey> all, List<UUID> scopedIds) {
     Map<UUID, List<Page>> bySurvey = new HashMap<>();
     for (Page page : pages.findAll())
       bySurvey.computeIfAbsent(page.getSurvey().getId(), ignored -> new ArrayList<>()).add(page);
@@ -186,25 +250,30 @@ public class DashboardReportingService {
           bySurvey.getOrDefault(survey.getId(), List.of()), schedule.now()).name();
       statuses.put(status, statuses.get(status) + 1);
     }
+    long withoutResponses = scopedIds == null
+        ? count("select count(*) from surveys s where not exists (select 1 from responses r where r.survey_id=s.id)")
+        : count("select count(*) from surveys s where s.id in (" + inSql(scopedIds.size()) + ") and not exists (select 1 from responses r where r.survey_id=s.id)", scopedIds.toArray());
     return map("totalSurveys", all.size(), "statuses", statuses,
         "createdInPeriod", all.stream().filter(s -> s.getCreatedAt() != null &&
             !s.getCreatedAt().atZone(ZONE).toInstant().isBefore(p.from()) &&
             s.getCreatedAt().atZone(ZONE).toInstant().isBefore(p.to())).count(),
         "publishedInPeriod", all.stream().filter(s -> s.getPublishedAt() != null &&
             !s.getPublishedAt().isBefore(p.from()) && s.getPublishedAt().isBefore(p.to())).count(),
-        "withoutResponses", count("select count(*) from surveys s where not exists "
-            + "(select 1 from responses r where r.survey_id=s.id)"));
+        "withoutResponses", withoutResponses);
   }
 
-  private Map<String, Object> activity(Period p, Timestamp firstTracking) {
+  private Map<String, Object> activity(Period p, Timestamp firstTracking, List<UUID> scopedIds) {
     String expression = bucketExpression("event_time", p.bucket());
+    String surveyFilterEvents = scopedIds == null ? "" : " and survey_id in (" + inSql(scopedIds.size()) + ") ";
+    String surveyFilterResponses = scopedIds == null ? "" : " and survey_id in (" + inSql(scopedIds.size()) + ") ";
+
     Map<Integer, Long> views = bucketCounts("select " + expression + " idx,count(*) total "
         + "from (select received_at event_time from survey_events where event_type='SURVEY_VIEWED' "
-        + "and event_source='CLIENT' and received_at>=? and received_at<?) x group by 1",
-        p.from(), p.to(), p.bucket());
+        + "and event_source='CLIENT'" + surveyFilterEvents + "and received_at>=? and received_at<?) x group by 1",
+        p.from(), p.to(), p.bucket(), scopedIds);
     Map<Integer, Long> submits = bucketCounts("select " + expression + " idx,count(*) total "
-        + "from (select submitted_at event_time from responses where submitted_at>=? "
-        + "and submitted_at<?) x group by 1", p.from(), p.to(), p.bucket());
+        + "from (select submitted_at event_time from responses where 1=1 " + surveyFilterResponses
+        + "and submitted_at>=? and submitted_at<?) x group by 1", p.from(), p.to(), p.bucket(), scopedIds);
     int size = bucketSize(p);
     List<Map<String, Object>> timeline = new ArrayList<>();
     for (int i = 0; i < size; i++) {
@@ -271,14 +340,36 @@ public class DashboardReportingService {
   }
 
   private Map<Integer, Long> bucketCounts(String sql, Instant from, Instant to, String bucket) {
+    return bucketCounts(sql, from, to, bucket, null);
+  }
+
+  private Map<Integer, Long> bucketCounts(String sql, Instant from, Instant to, String bucket, List<UUID> scopedIds) {
     Map<Integer, Long> result = new HashMap<>();
     org.springframework.jdbc.core.RowCallbackHandler row = rs -> result.put(rs.getInt(1), rs.getLong(2));
-    if (bucket.equals("MONTH")) jdbc.query(sql, row, ts(from), ts(from), ts(from), ts(to));
-    else jdbc.query(sql, row, ts(from), ts(from), ts(to));
+    List<Object> params = new ArrayList<>();
+    if (bucket.equals("MONTH")) {
+      params.add(ts(from)); params.add(ts(from));
+    } else {
+      params.add(ts(from));
+    }
+    if (scopedIds != null) {
+      params.addAll(scopedIds);
+    }
+    params.add(ts(from));
+    params.add(ts(to));
+    jdbc.query(sql, row, params.toArray());
     return result;
   }
 
-  private Map<String, Object> funnel(Period p) {
+  private Map<String, Object> funnel(Period p, List<UUID> scopedIds) {
+    String surveyFilter = scopedIds == null ? "" : " and s.survey_id in (" + inSql(scopedIds.size()) + ") ";
+    List<Object> params = new ArrayList<>();
+    params.add(ts(p.to()));
+    params.add(ts(p.to()));
+    if (scopedIds != null) params.addAll(scopedIds);
+    params.add(ts(p.from()));
+    params.add(ts(p.to()));
+
     return jdbc.query("select count(*) viewed, "
         + "count(*) filter(where s.started_at is not null and s.started_at<?) started, "
         + "count(*) filter(where exists(select 1 from responses r where r.session_id=s.id "
@@ -288,7 +379,7 @@ public class DashboardReportingService {
         + "count(*) filter(where s.status='ABANDONED') abandoned, "
         + "count(*) filter(where s.started_at is null and not exists "
         + "(select 1 from responses r where r.session_id=s.id)) only_viewed "
-        + "from survey_sessions s where s.first_viewed_at>=? and s.first_viewed_at<? "
+        + "from survey_sessions s where 1=1 " + surveyFilter + " and s.first_viewed_at>=? and s.first_viewed_at<? "
         + "and exists(select 1 from survey_events e where e.session_id=s.id "
         + "and e.event_type='SURVEY_VIEWED' and e.event_source='CLIENT')",
         rs -> { rs.next(); long viewed = rs.getLong(1), started = rs.getLong(2), submitted = rs.getLong(3);
@@ -297,59 +388,86 @@ public class DashboardReportingService {
               "onlyViewed", rs.getLong(6), "viewToStartRate", percent(started, viewed),
               "startToSubmitRate", percent(submitted, started),
               "viewToSubmitRate", percent(submitted, viewed), "provisional", p.to().isAfter(Instant.now().minusSeconds(1800)));
-        }, ts(p.to()), ts(p.to()), ts(p.from()), ts(p.to()));
+        }, params.toArray());
   }
 
-  private Map<String, Object> acquisition(Period p) {
-    String base = " from survey_sessions where first_viewed_at>=? and first_viewed_at<?";
+  private Map<String, Object> acquisition(Period p, List<UUID> scopedIds) {
+    String base = " from survey_sessions where 1=1 "
+        + (scopedIds == null ? "" : " and survey_id in (" + inSql(scopedIds.size()) + ") ")
+        + " and first_viewed_at>=? and first_viewed_at<?";
+    List<Object> params = new ArrayList<>();
+    if (scopedIds != null) params.addAll(scopedIds);
+    params.add(ts(p.from()));
+    params.add(ts(p.to()));
+    Object[] arr = params.toArray();
     List<Map<String, Object>> devices = jdbc.query("select coalesce(device_type,'UNKNOWN'),count(*)"
-        + base + " group by 1 order by 2 desc", (rs,n) -> map("label",rs.getString(1),"count",rs.getLong(2)),
-        ts(p.from()), ts(p.to()));
+        + base + " group by 1 order by 2 desc", (rs,n) -> map("label",rs.getString(1),"count",rs.getLong(2)), arr);
     List<Map<String, Object>> sources = jdbc.query("select coalesce(nullif(utm_source,''),"
         + "nullif(referrer_host,''),'UNKNOWN'),count(*)" + base + " group by 1 order by 2 desc limit 10",
-        (rs,n) -> map("label",rs.getString(1),"count",rs.getLong(2)), ts(p.from()), ts(p.to()));
+        (rs,n) -> map("label",rs.getString(1),"count",rs.getLong(2)), arr);
     List<Map<String, Object>> mediums = jdbc.query("select coalesce(utm_medium,'UNKNOWN'),count(*)"
         + base + " group by 1 order by 2 desc limit 10",
-        (rs,n) -> map("label",rs.getString(1),"count",rs.getLong(2)), ts(p.from()), ts(p.to()));
+        (rs,n) -> map("label",rs.getString(1),"count",rs.getLong(2)), arr);
     return map("devices", devices, "sources", sources, "mediums", mediums);
   }
 
-  private Map<String, Object> engagement(Period p) {
+  private Map<String, Object> engagement(Period p, List<UUID> scopedIds) {
+    String surveyFilterR = scopedIds == null ? "" : " and r.survey_id in (" + inSql(scopedIds.size()) + ") ";
+    String surveyFilterS = scopedIds == null ? "" : " and s.survey_id in (" + inSql(scopedIds.size()) + ") ";
+
+    List<Object> pR = new ArrayList<>();
+    if (scopedIds != null) pR.addAll(scopedIds);
+    pR.add(ts(p.from())); pR.add(ts(p.to()));
+
+    List<Object> pS = new ArrayList<>();
+    if (scopedIds != null) pS.addAll(scopedIds);
+    pS.add(ts(p.from())); pS.add(ts(p.to()));
+
     Double medianMs = jdbc.queryForObject("select percentile_cont(0.5) within group "
         + "(order by s.active_duration_ms) from responses r join survey_sessions s "
-        + "on s.id=r.session_id where r.submitted_at>=? and r.submitted_at<? "
-        + "and s.active_duration_ms is not null", Double.class, ts(p.from()), ts(p.to()));
+        + "on s.id=r.session_id where 1=1 " + surveyFilterR + " and r.submitted_at>=? and r.submitted_at<? "
+        + "and s.active_duration_ms is not null", Double.class, pR.toArray());
     Double avgPages = jdbc.queryForObject("select avg(coalesce(v.pages,0)) from survey_sessions s "
         + "left join (select session_id,count(distinct page_id) pages from survey_page_visits "
-        + "group by session_id) v on v.session_id=s.id where s.first_viewed_at>=? "
-        + "and s.first_viewed_at<?", Double.class, ts(p.from()), ts(p.to()));
-    List<Map<String, Object>> weekday = jdbc.query("select extract(isodow from submitted_at at time zone "
-        + "'Asia/Ho_Chi_Minh')::int as weekday,count(*) from responses where submitted_at>=? "
-        + "and submitted_at<? group by 1 order by 1",
-        (rs,n) -> map("day",rs.getInt(1),"submissions",rs.getLong(2)), ts(p.from()), ts(p.to()));
-    List<Map<String, Object>> hour = jdbc.query("select extract(hour from submitted_at at time zone "
-        + "'Asia/Ho_Chi_Minh')::int as hour_of_day,count(*) from responses where submitted_at>=? "
-        + "and submitted_at<? group by 1 order by 1",
-        (rs,n) -> map("hour",rs.getInt(1),"submissions",rs.getLong(2)), ts(p.from()), ts(p.to()));
+        + "group by session_id) v on v.session_id=s.id where 1=1 " + surveyFilterS + " and s.first_viewed_at>=? "
+        + "and s.first_viewed_at<?", Double.class, pS.toArray());
+    List<Map<String, Object>> weekday = jdbc.query("select extract(isodow from r.submitted_at at time zone "
+        + "'Asia/Ho_Chi_Minh')::int as weekday,count(*) from responses r where 1=1 " + surveyFilterR
+        + " and r.submitted_at>=? and r.submitted_at<? group by 1 order by 1",
+        (rs,n) -> map("day",rs.getInt(1),"submissions",rs.getLong(2)), pR.toArray());
+    List<Map<String, Object>> hour = jdbc.query("select extract(hour from r.submitted_at at time zone "
+        + "'Asia/Ho_Chi_Minh')::int as hour_of_day,count(*) from responses r where 1=1 " + surveyFilterR
+        + " and r.submitted_at>=? and r.submitted_at<? group by 1 order by 1",
+        (rs,n) -> map("hour",rs.getInt(1),"submissions",rs.getLong(2)), pR.toArray());
     return map("medianActiveDurationMs", medianMs, "averagePagesViewed", avgPages,
         "byWeekday", weekday, "byHour", hour);
   }
 
-  private Map<String, Object> quality(Period p, Timestamp firstTracking) {
+  private Map<String, Object> quality(Period p, Timestamp firstTracking, List<UUID> scopedIds) {
     Timestamp from = ts(p.from()), to = ts(p.to());
-    long responses = count("select count(*) from responses where submitted_at>=? and submitted_at<?", from, to);
-    long linked = count("select count(*) from responses where submitted_at>=? and submitted_at<? "
-        + "and session_id is not null", from, to);
-    long counted = count("select count(*) from responses where submitted_at>=? and submitted_at<? "
-        + "and applicable_question_count is not null", from, to);
-    long sessions = count("select count(*) from survey_sessions where first_viewed_at>=? "
-        + "and first_viewed_at<?", from, to);
-    long device = count("select count(*) from survey_sessions where first_viewed_at>=? "
-        + "and first_viewed_at<? and device_type is not null", from, to);
-    long source = count("select count(*) from survey_sessions where first_viewed_at>=? "
-        + "and first_viewed_at<? and (utm_source is not null or referrer_host is not null)", from, to);
+    long responses = countScoped("select count(*) from responses where submitted_at>=? and submitted_at<?", scopedIds, from, to);
+    long linked = countScoped("select count(*) from responses where submitted_at>=? and submitted_at<? "
+        + "and session_id is not null", scopedIds, from, to);
+    long counted = countScoped("select count(*) from responses where submitted_at>=? and submitted_at<? "
+        + "and applicable_question_count is not null", scopedIds, from, to);
+
+    String inS = scopedIds == null ? "" : " and survey_id in (" + inSql(scopedIds.size()) + ") ";
+    List<Object> pSess = new ArrayList<>();
+    if (scopedIds != null) pSess.addAll(scopedIds);
+    pSess.add(from); pSess.add(to);
+    Object[] arrSess = pSess.toArray();
+
+    long sessions = count("select count(*) from survey_sessions where 1=1 " + inS + " and first_viewed_at>=? and first_viewed_at<?", arrSess);
+    long device = count("select count(*) from survey_sessions where 1=1 " + inS + " and first_viewed_at>=? and first_viewed_at<? and device_type is not null", arrSess);
+    long source = count("select count(*) from survey_sessions where 1=1 " + inS + " and first_viewed_at>=? and first_viewed_at<? and (utm_source is not null or referrer_host is not null)", arrSess);
+
+    String inR = scopedIds == null ? "" : " and r.survey_id in (" + inSql(scopedIds.size()) + ") ";
+    List<Object> pDur = new ArrayList<>();
+    if (scopedIds != null) pDur.addAll(scopedIds);
+    pDur.add(from); pDur.add(to);
     long duration = count("select count(*) from responses r join survey_sessions s on s.id=r.session_id "
-        + "where r.submitted_at>=? and r.submitted_at<? and s.active_duration_ms is not null", from, to);
+        + "where 1=1 " + inR + " and r.submitted_at>=? and r.submitted_at<? and s.active_duration_ms is not null", pDur.toArray());
+
     return map("responseSessionCoverage", percent(linked, responses),
         "questionCountCoverage", percent(counted, responses),
         "deviceCoverage", percent(device, sessions), "sourceCoverage", percent(source, sessions),
@@ -357,12 +475,18 @@ public class DashboardReportingService {
         "trackingStartedAt", firstTracking == null ? null : firstTracking.toInstant());
   }
 
-  private Map<String, Object> completeness(Period p) {
+  private Map<String, Object> completeness(Period p, List<UUID> scopedIds) {
+    String surveyFilter = scopedIds == null ? "" : " and survey_id in (" + inSql(scopedIds.size()) + ") ";
+    List<Object> params = new ArrayList<>();
+    if (scopedIds != null) params.addAll(scopedIds);
+    params.add(ts(p.from()));
+    params.add(ts(p.to()));
+
     return jdbc.query("select count(*),count(*) filter(where applicable_question_count is not null "
         + "and answered_question_count is not null), "
         + "coalesce(sum(applicable_question_count) filter(where answered_question_count is not null),0), "
         + "coalesce(sum(answered_question_count) filter(where applicable_question_count is not null),0) "
-        + "from responses where submitted_at>=? and submitted_at<?",
+        + "from responses where 1=1 " + surveyFilter + " and submitted_at>=? and submitted_at<?",
         rs -> { rs.next(); long responses = rs.getLong(1), exact = rs.getLong(2),
             applicable = rs.getLong(3), answered = rs.getLong(4);
           return map("responses",responses,"exactResponses",exact,
@@ -373,12 +497,25 @@ public class DashboardReportingService {
               "averageSkipped",exact == 0 ? null : round((applicable-answered)*1.0/exact),
               "completionRate",percent(answered,applicable),
               "estimatedLegacyResponses",responses-exact);
-        }, ts(p.from()),ts(p.to()));
+        }, params.toArray());
   }
 
   public Map<String, Object> surveyRows(Period p, String search, String status,
       String sort, int page, int size) {
+    return surveyRows(p, search, status, sort, page, size, null, null);
+  }
+
+  public Map<String, Object> surveyRows(Period p, String search, String status,
+      String sort, int page, int size, List<UUID> scopedSurveyIds, List<Survey> scopedSurveys) {
     if (page < 1 || size < 1 || size > 100) throw new BadRequestException("page/size khong hop le");
+    if (scopedSurveyIds != null && scopedSurveyIds.isEmpty()) {
+      return map("total", 0, "page", page, "size", size, "rows", List.of(),
+          "period", map("from", p.from(), "to", p.to(), "bucket", p.bucket(),
+              "filterMode", p.filterMode(), "trendMode", p.filterMode().equals("BETWEEN")
+                  ? "PREVIOUS_EQUAL_PERIOD" : "RECENT_30_DAYS",
+              "trendFrom", p.trendFrom(), "trendTo", p.trendTo(),
+              "previousFrom", p.previousFrom(), "previousTo", p.previousTo()));
+    }
     Timestamp previous = ts(p.previousFrom()), from = ts(p.from()), to = ts(p.to());
     Timestamp trendFrom = ts(p.trendFrom()), trendTo = ts(p.trendTo());
     Map<UUID, long[]> responseCounts = new HashMap<>();
@@ -430,7 +567,9 @@ public class DashboardReportingService {
     for (Page item : pages.findAll()) bySurvey.computeIfAbsent(item.getSurvey().getId(),
         ignored -> new ArrayList<>()).add(item);
     List<Map<String, Object>> rows = new ArrayList<>();
-    for (Survey survey : surveys.findAllByOrderByCreatedAtDesc()) {
+    List<Survey> source = scopedSurveyIds == null ? surveys.findAllByOrderByCreatedAtDesc()
+        : (scopedSurveys != null ? scopedSurveys : surveys.findByIdInOrderByCreatedAtDesc(scopedSurveyIds));
+    for (Survey survey : source) {
       String state = schedule.status(survey,bySurvey.getOrDefault(survey.getId(),List.of()),schedule.now()).name();
       if (status != null && !status.isBlank() && !state.equalsIgnoreCase(status)) continue;
       if (search != null && !search.isBlank() && (survey.getTitle() == null ||
@@ -477,6 +616,24 @@ public class DashboardReportingService {
   private long count(String sql, Object... args) {
     Long value = jdbc.queryForObject(sql,Long.class,args);
     return value == null ? 0 : value;
+  }
+
+  private long countScoped(String sql, List<UUID> scopedIds, Object... args) {
+    if (scopedIds == null) return count(sql, args);
+    String modifiedSql = sql.replace("where ", "where survey_id in (" + inSql(scopedIds.size()) + ") and ");
+    Object[] allArgs = combineArgs(scopedIds, args);
+    return count(modifiedSql, allArgs);
+  }
+
+  private static String inSql(int count) {
+    return String.join(",", Collections.nCopies(count, "?"));
+  }
+
+  private static Object[] combineArgs(List<UUID> ids, Object... more) {
+    Object[] result = new Object[ids.size() + more.length];
+    for (int i = 0; i < ids.size(); i++) result[i] = ids.get(i);
+    System.arraycopy(more, 0, result, ids.size(), more.length);
+    return result;
   }
 
   private static Timestamp ts(Instant value) { return Timestamp.from(value); }

@@ -146,6 +146,10 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in .env}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
       MINIO_BUCKET: ${MINIO_BUCKET:-survey-media}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
+      GOOGLE_ENCRYPTION_SECRET: ${GOOGLE_ENCRYPTION_SECRET:-}
     restart: on-failure:5
     depends_on:
       postgres:
@@ -171,6 +175,9 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_WEBHOOK_URL: ${TELEGRAM_WEBHOOK_URL:-}
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      ZALO_BOT_TOKEN: ${ZALO_BOT_TOKEN:-}
+      ZALO_WEBHOOK_URL: ${ZALO_WEBHOOK_URL:-}
+      ZALO_WEBHOOK_SECRET: ${ZALO_WEBHOOK_SECRET:-}
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in .env}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
@@ -219,6 +226,19 @@ services:
         condition: service_started
       notification-service:
         condition: service_started
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      gateway-service:
+        condition: service_started
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   postgres-data:

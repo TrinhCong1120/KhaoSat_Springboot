@@ -81,7 +81,8 @@ class SurveyCriticalAlertTest {
     SurveyRepository surveys = mock(SurveyRepository.class);
     SurveyAccessRepository accesses = mock(SurveyAccessRepository.class);
     SurveyAlertService notifier = mock(SurveyAlertService.class);
-    SurveyAccessService service = new SurveyAccessService(guard, surveys, accesses, jdbc, notifier);
+    SurveyAccessService service = new SurveyAccessService(guard, surveys, jdbc, notifier,
+        mock(com.trinhcong1120.survey_service.security.GroupPermissions.class));
     UUID surveyId = UUID.randomUUID(), ownerId = UUID.randomUUID();
     UUID actorId = UUID.randomUUID(), newOwnerId = UUID.randomUUID();
     Survey survey = new Survey(); survey.setId(surveyId); survey.setCreatorUserId(ownerId);
@@ -92,6 +93,8 @@ class SurveyCriticalAlertTest {
       ResultSet rs = mock(ResultSet.class);
       when(rs.getString("username")).thenReturn("new-owner");
       when(rs.getString("email")).thenReturn("new@example.com");
+      when(rs.getString(1)).thenReturn("new-owner");
+      when(rs.getString(2)).thenReturn("new@example.com");
       RowMapper<Object> mapper = call.getArgument(1);
       return List.of(mapper.mapRow(rs, 0));
     });

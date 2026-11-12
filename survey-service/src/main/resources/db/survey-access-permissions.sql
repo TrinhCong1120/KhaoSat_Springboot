@@ -64,7 +64,7 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO role_permissions(role_id, permission_id)
 SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
-WHERE lower(r.name) IN ('admin', 'manager')
+WHERE lower(r.name) = 'admin'
   AND p.code = 'survey_delete_all'
 ON CONFLICT DO NOTHING;
 

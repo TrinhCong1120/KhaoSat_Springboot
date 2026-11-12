@@ -1,6 +1,7 @@
 package com.trinhcong1120.survey_service.security;
 
 import com.trinhcong1120.survey_service.entity.*;
+import com.trinhcong1120.survey_service.exception.BadRequestException;
 import com.trinhcong1120.survey_service.exception.NotFoundException;
 import com.trinhcong1120.survey_service.repository.*;
 import java.util.List;
@@ -17,26 +18,26 @@ import org.springframework.data.domain.Pageable;
 @Transactional(readOnly = true)
 public class SurveyAccessGuard {
   private final SurveyRepository surveys;
-  private final SurveyAccessRepository accesses;
   private final PageRepository pages;
   private final QuestionRepository questions;
   private final OptionRepository options;
   private final ConditionRepository conditions;
   private final ResponseRepository responses;
   private final MediaFileRepository media;
+  private final GroupPermissions groupPermissions;
 
-  public SurveyAccessGuard(SurveyRepository surveys, SurveyAccessRepository accesses,
+  public SurveyAccessGuard(SurveyRepository surveys,
       PageRepository pages, QuestionRepository questions, OptionRepository options,
       ConditionRepository conditions, ResponseRepository responses,
-      MediaFileRepository media) {
+      MediaFileRepository media, GroupPermissions groupPermissions) {
     this.surveys = surveys;
-    this.accesses = accesses;
     this.pages = pages;
     this.questions = questions;
     this.options = options;
     this.conditions = conditions;
     this.responses = responses;
     this.media = media;
+    this.groupPermissions = groupPermissions;
   }
 
   public UUID userId() {
@@ -53,8 +54,10 @@ public class SurveyAccessGuard {
 
   public boolean has(String permission) {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-    return auth != null && auth.getAuthorities().stream()
-        .anyMatch(a -> permission.equals(a.getAuthority()));
+    if (auth == null || auth.getAuthorities().stream().noneMatch(a -> permission.equals(a.getAuthority()))) return false;
+    // The migration revokes Manager's global delete grant; an old JWT must not keep it alive.
+    return !"survey_delete_all".equals(permission)
+        || groupPermissions.hasCurrentGlobalPermission(userId(), permission);
   }
 
   public Survey survey(UUID id) {
@@ -68,60 +71,92 @@ public class SurveyAccessGuard {
   public record Actions(boolean canEdit, boolean canDelete, boolean canManageAccess) {}
 
   public Actions actions(Survey survey) {
-    boolean owner = isOwner(survey);
-    boolean edit = has("survey_update_all");
-    boolean delete = has("survey_delete_all");
-    if (edit && delete) return new Actions(true, true, true);
-    boolean canEdit = has("survey_update") && (owner || access(survey).map(SurveyAccess::isCanEdit).orElse(false));
-    return new Actions(edit || canEdit, delete || (has("survey_delete") && owner),
-        edit || (has("survey_update") && owner));
+    return new Actions(can(survey, "EDIT"), can(survey, "DELETE"), can(survey, "MANAGE_ACCESS"));
+  }
+
+  public boolean can(UUID surveyId, String permission) { return can(survey(surveyId), permission); }
+
+  public boolean can(Survey survey, String permission) {
+    if ("VIEW".equals(permission) && (has("survey_view_all") || has("survey_update_all")
+        || has("survey_delete_all"))) return true;
+    if (("EDIT".equals(permission) || "MANAGE_PUBLICATION".equals(permission)
+        || "MANAGE_ACCESS".equals(permission)) && has("survey_update_all")) return true;
+    if ("DELETE".equals(permission) && has("survey_delete_all")) return true;
+    if (("VIEW_RESPONSES".equals(permission) || "EXPORT_DATA".equals(permission))
+        && has("survey_view_all")) return true;
+    var effective = groupPermissions.survey(survey.getId(), survey.getGroupId(), userId());
+    if ("VIEW".equals(permission)) return effective.stream().anyMatch(GroupPermissions.SURVEY::contains);
+    if ("VIEW_RESPONSES".equals(permission)) return effective.contains("VIEW_RESPONSES");
+    return effective.contains(permission);
+  }
+
+  public void require(UUID surveyId, String permission) {
+    if (!can(surveyId, permission)) throw new AccessDeniedException("Khong co quyen " + permission + " tren survey");
+  }
+
+  public void viewResponses(UUID id) { require(id, "VIEW_RESPONSES"); }
+  public void exportData(UUID id) { require(id, "EXPORT_DATA"); }
+  public void publication(UUID id) { require(id, "MANAGE_PUBLICATION"); }
+
+  public java.util.Set<String> effectiveSurveyPermissions(UUID id) {
+    java.util.Set<String> result = new java.util.HashSet<>();
+    for (String permission : GroupPermissions.SURVEY)
+      if (can(id, permission)) result.add(permission);
+    return result;
   }
 
   public void view(UUID id) {
-    Survey survey = survey(id);
-    if (has("survey_view_all")) return;
-    if (has("survey_view") && (isOwner(survey) || access(survey).map(SurveyAccess::isCanView).orElse(false))) return;
-    throw new AccessDeniedException("Khong co quyen xem survey");
+    require(id, "VIEW");
   }
 
   public void edit(UUID id) {
-    Survey survey = survey(id);
-    if (has("survey_update_all")) return;
-    if (has("survey_update") && (isOwner(survey) || access(survey).map(SurveyAccess::isCanEdit).orElse(false))) return;
-    throw new AccessDeniedException("Khong co quyen sua survey");
+    require(id, "EDIT");
   }
 
   public void delete(UUID id) {
-    Survey survey = survey(id);
-    if (has("survey_delete_all") || (has("survey_delete") && isOwner(survey))) return;
-    throw new AccessDeniedException("Khong co quyen xoa survey");
+    require(id, "DELETE");
   }
 
   public void manageAccess(UUID id) {
-    Survey survey = survey(id);
-    if (canManageAccess(survey)) return;
-    throw new AccessDeniedException("Khong co quyen quan ly access");
+    require(id, "MANAGE_ACCESS");
   }
 
   public List<Survey> visibleSurveys() {
-    if (has("survey_view_all"))
-      return surveys.findAllByOrderByCreatedAtDesc();
-    if (!has("survey_view")) return List.of();
-    return surveys.findVisibleTo(userId());
+    if (canSeeAllSurveys()) return surveys.findAllByOrderByCreatedAtDesc();
+    List<UUID> ids = groupPermissions.visibleSurveyIds(userId(), false);
+    return ids.isEmpty() ? List.of() : surveys.findByIdInOrderByCreatedAtDesc(ids);
   }
 
   public Page<Survey> visibleSurveys(Pageable pageable) {
-    if (has("survey_view_all"))
-      return surveys.findAll(pageable);
-    if (!has("survey_view")) return Page.empty(pageable);
-    return surveys.findVisibleTo(userId(), pageable);
+    if (canSeeAllSurveys()) return surveys.findAll(pageable);
+    List<UUID> ids = groupPermissions.visibleSurveyIds(userId(), false);
+    return ids.isEmpty() ? Page.empty(pageable) : surveys.findByIdIn(ids, pageable);
+  }
+
+  public Page<Survey> visibleSurveys(Pageable pageable, UUID groupId, boolean shared) {
+    if (groupId == null && !shared) return visibleSurveys(pageable);
+    if (canSeeAllSurveys() && !shared) return surveys.findByGroupId(groupId, pageable);
+    List<UUID> visible = canSeeAllSurveys()
+        ? groupPermissions.directlySharedSurveyIds(userId())
+        : groupPermissions.visibleSurveyIds(userId(), false);
+    if (shared) {
+      var direct = groupPermissions.directlySharedSurveyIds(userId());
+      visible = visible.stream().filter(direct::contains).toList();
+    }
+    if (visible.isEmpty()) return Page.empty(pageable);
+    return groupId == null ? surveys.findByIdIn(visible, pageable)
+        : surveys.findByIdInAndGroupId(visible, groupId, pageable);
+  }
+
+  private boolean canSeeAllSurveys() {
+    return has("survey_view_all") || has("survey_update_all") || has("survey_delete_all");
   }
 
   public void viewPage(UUID id) { view(pageSurvey(id)); }
   public void editPage(UUID id) { edit(pageSurvey(id)); }
   public void viewQuestion(UUID id) { view(questionSurvey(id)); }
   public void editQuestion(UUID id) { edit(questionSurvey(id)); }
-  public void viewResponse(UUID id) { view(responses.findById(id)
+  public void viewResponse(UUID id) { viewResponses(responses.findById(id)
       .orElseThrow(() -> new NotFoundException("Response khong ton tai"))
       .getSurvey().getId()); }
 
@@ -133,6 +168,21 @@ public class SurveyAccessGuard {
     UUID targetSurvey = questionSurvey(targetId);
     if (!sourceSurvey.equals(targetSurvey))
       throw new AccessDeniedException("Questions phai cung survey");
+    edit(sourceSurvey);
+  }
+
+  public void editConditionTargets(UUID sourceId, String targetType, UUID targetQuestionId, UUID targetPageId) {
+    UUID sourceSurvey = questionSurvey(sourceId);
+    UUID targetSurvey;
+    if ("PAGE".equalsIgnoreCase(targetType)) {
+      if (targetPageId == null) throw new BadRequestException("Target page id is required for PAGE condition");
+      targetSurvey = pageSurvey(targetPageId);
+    } else {
+      if (targetQuestionId == null) throw new BadRequestException("Target question id is required for QUESTION condition");
+      targetSurvey = questionSurvey(targetQuestionId);
+    }
+    if (!sourceSurvey.equals(targetSurvey))
+      throw new AccessDeniedException("Source and target must belong to the same survey");
     edit(sourceSurvey);
   }
 
@@ -157,7 +207,9 @@ public class SurveyAccessGuard {
     Condition condition = conditions.findById(id)
         .orElseThrow(() -> new NotFoundException("Condition khong ton tai"));
     UUID source = condition.getSourceQuestion().getPage().getSurvey().getId();
-    UUID target = condition.getTargetQuestion().getPage().getSurvey().getId();
+    UUID target = condition.getTargetQuestion() != null
+        ? condition.getTargetQuestion().getPage().getSurvey().getId()
+        : (condition.getTargetPage() != null ? condition.getTargetPage().getSurvey().getId() : source);
     if (!source.equals(target)) throw new AccessDeniedException("Condition qua nhieu survey");
     return source;
   }
@@ -174,15 +226,8 @@ public class SurveyAccessGuard {
     };
   }
 
-  private boolean isOwner(Survey survey) {
-    return userId().equals(survey.getCreatorUserId());
-  }
-
   private boolean canManageAccess(Survey survey) {
-    return has("survey_update_all") || (has("survey_update") && isOwner(survey));
+    return can(survey, "MANAGE_ACCESS");
   }
 
-  private java.util.Optional<SurveyAccess> access(Survey survey) {
-    return accesses.findBySurvey_IdAndUserId(survey.getId(), userId());
-  }
 }

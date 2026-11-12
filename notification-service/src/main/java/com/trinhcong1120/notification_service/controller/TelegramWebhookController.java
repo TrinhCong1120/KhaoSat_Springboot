@@ -27,7 +27,12 @@ public class TelegramWebhookController {
         if (expected.isBlank() || secret == null || !MessageDigest.isEqual(
                 expected.getBytes(StandardCharsets.UTF_8), secret.getBytes(StandardCharsets.UTF_8)))
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        telegram.handleUpdate(update);
+        try {
+            telegram.handleUpdate(update);
+        } catch (Exception ex) {
+            org.slf4j.LoggerFactory.getLogger(TelegramWebhookController.class)
+                    .error("Uncaught exception in telegram webhook update", ex);
+        }
         return ResponseEntity.ok().build();
     }
 }

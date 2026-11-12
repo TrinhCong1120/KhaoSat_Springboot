@@ -40,19 +40,12 @@ class SurveyControllerPermissionTest {
   void tearDown() { SecurityContextHolder.clearContext(); }
 
   @Test
-  void updateAndDeleteRequireTheirOwnPermissions() {
+  void scopedAccessCanReachServiceWithoutGlobalJwtPermission() {
     UUID id = UUID.randomUUID();
     authenticate("survey_view");
-    assertThrows(AccessDeniedException.class, () -> controller.update(id, null));
-    assertThrows(AccessDeniedException.class, () -> controller.delete(id));
-    verifyNoInteractions(service);
-
-    authenticate("survey_update");
     controller.update(id, null);
-    assertThrows(AccessDeniedException.class, () -> controller.delete(id));
-
-    authenticate("survey_delete_all");
     controller.delete(id);
+    verify(service).update(id, null);
     verify(service).delete(id);
   }
 

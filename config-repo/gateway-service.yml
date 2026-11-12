@@ -18,7 +18,7 @@ spring:
             - id: core-service
               uri: lb://core-service
               predicates:
-                - Path=/api/Users/**,/api/Roles/**,/api/Menus/**,/api/Functions/**
+                - Path=/api/Users/**,/api/users/**,/api/Roles/**,/api/roles/**,/api/Menus/**,/api/menus/**,/api/Functions/**,/api/functions/**
 
             - id: survey-validation-rules
               uri: lb://survey-service
@@ -28,7 +28,7 @@ spring:
             - id: survey-service
               uri: lb://survey-service
               predicates:
-                - Path=/api/Surveys/**,/api/Pages/**,/api/Responses/**,/api/Dashboard/**,/api/FailedSurveys/**,/api/Questions/**,/api/Reports/**,/api/Conditions/**,/api/Media/**,/api/public/surveys/**,/api/public/site-visits,/api/public/site-visits/**
+                - Path=/api/Surveys/**,/api/surveys/**,/api/integrations/google/**,/api/Groups/**,/api/Pages/**,/api/Responses/**,/api/Dashboard/**,/api/FailedSurveys/**,/api/Questions/**,/api/Reports/**,/api/Conditions/**,/api/Media/**,/api/public/surveys/**,/api/public/site-visits,/api/public/site-visits/**
               filters:
                 - PreserveHostHeader
 
@@ -58,6 +58,11 @@ spring:
               predicates:
                 - Path=/api/telegram/webhook
 
+            - id: zalo-webhook
+              uri: lb://notification-service
+              predicates:
+                - Path=/api/zalo/webhook
+
             - id: auth-service-openapi
               uri: lb://auth-service
               predicates:
@@ -84,8 +89,15 @@ app:
     enabled: true
     allowed-origins:
       - "http://localhost:3000"
+      - "http://localhost"
+      - "http://localhost:80"
+      - "http://127.0.0.1"
+      - "http://127.0.0.1:3000"
+      - "http://127.0.0.1:80"
     allowed-origin-patterns:
       - "https://*.ngrok-free.app"
+      - "http://localhost:*"
+      - "http://127.0.0.1:*"
 
 
     allowed-methods:

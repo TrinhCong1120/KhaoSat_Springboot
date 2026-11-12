@@ -27,7 +27,7 @@ public class RoleController {
 
         this.roleService = roleService;
     }
-    @PreAuthorize("hasAuthority('role_view')")
+    @PreAuthorize("hasAuthority('role_view') or hasAuthority('ROLE_admin') or hasRole('admin')")
     @GetMapping
     public ResponseEntity<List<RoleResponse>> getAllRoles() {
         return ResponseEntity.ok(
@@ -35,14 +35,14 @@ public class RoleController {
         );
     }
 
-    @PreAuthorize("hasAuthority('role_view')")
+    @PreAuthorize("hasAuthority('role_view') or hasAuthority('ROLE_admin') or hasRole('admin')")
     @GetMapping("/page")
     public ResponseEntity<PagedResponse<RoleResponse>> getRolesPage(
             @RequestParam(defaultValue = "1") int page) {
         return ResponseEntity.ok(roleService.getRolesPage(page));
     }
 
-    @PreAuthorize("hasAuthority('role_view')")
+    @PreAuthorize("hasAuthority('role_view') or hasAuthority('ROLE_admin') or hasRole('admin')")
     @GetMapping("/{id}")
     public ResponseEntity<RoleDetailResponse> getRoleById(
             @PathVariable UUID id) {
