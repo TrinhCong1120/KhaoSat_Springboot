@@ -132,3 +132,4 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 # Kiểm tra dữ liệu trong surveyDB
 docker exec -i $(docker ps -q -f "name=postgres") psql -U postgres -d surveyDB -c "SELECT count(*) FROM surveys;"
 ```
+
